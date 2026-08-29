@@ -1,0 +1,169 @@
+cluster_id,count,centroid_lat,centroid_lon,first_date,last_date,persistence_days,max_frp,avg_frp,max_priority,max_fusion,dominant_label,industrial_context,nearest_facility_name,nearest_facility_type,dist_to_industrial_km
+C77,2,8.332525,81.02947,2026-08-25,2026-08-25,1,5.71,3.42,0.44,0.06,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,473.49
+C78,2,8.351385,80.672195,2026-08-25,2026-08-25,1,6.02,4.98,0.37,0.0,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,465.0
+C29,4,8.357745000000001,80.23385999999999,2026-08-25,2026-08-25,1,7.87,5.6,0.42,0.01,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,461.01
+C79,2,8.418205,80.52224000000001,2026-08-25,2026-08-25,1,3.76,2.42,0.36,0.01,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,455.95
+C47,3,8.42215,80.56208333333332,2026-08-25,2026-08-25,1,10.47,6.73,0.47,0.0,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,455.72
+C48,3,8.43759,80.34761,2026-08-25,2026-08-28,4,11.18,6.52,0.38,0.02,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,451.88
+C80,2,8.449845,80.80749,2026-08-25,2026-08-26,2,4.62,4.34,0.3,0.02,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,456.22
+C30,4,8.526835,80.822295,2026-08-25,2026-08-28,4,5.61,4.49,0.43,0.2,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,448.19
+C81,2,8.63293,80.345505,2026-08-25,2026-08-25,1,8.37,7.78,0.38,0.0,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,430.85
+C49,3,8.667816666666667,80.43903999999999,2026-08-25,2026-08-25,1,6.78,4.71,0.35,0.01,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,426.32
+C82,2,10.214125,79.243405,2026-08-25,2026-08-25,1,4.51,4.0,0.3,0.12,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,273.01
+C83,2,14.867805,79.736825,2026-08-25,2026-08-25,1,9.7,6.57,0.45,0.01,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,101.72
+C84,2,17.08592,79.68515,2026-08-25,2026-08-25,1,4.27,4.01,0.3,0.01,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,246.67
+C85,2,29.77695,72.263295,2026-08-25,2026-08-26,2,4.79,4.3,0.31,0.0,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,424.28
+C31,4,30.1693925,72.42152750000001,2026-08-25,2026-08-27,3,8.86,6.08,0.38,0.0,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,421.21
+C50,3,30.377093333333335,73.89498333333334,2026-08-25,2026-08-26,2,4.26,4.11,0.29,0.0,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,303.65
+C86,2,31.096735000000002,72.31396000000001,2026-08-25,2026-08-25,1,3.38,2.84,0.26,0.0,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,474.23
+C51,3,31.743413333333333,72.21721666666667,2026-08-25,2026-08-25,1,11.35,7.18,0.38,0.03,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,522.18
+C87,2,22.246545,87.38782,2026-08-25,2026-08-27,3,1.81,1.26,0.31,0.21,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,95.98
+C4,21,22.37141666666667,87.28620047619049,2026-08-25,2026-08-29,5,10.47,3.05,0.84,0.36,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,80.47
+C88,2,22.36357,87.0176,2026-08-25,2026-08-28,4,4.8,2.65,0.51,0.21,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,55.84
+C1,57,15.178048421052631,76.66755473684212,2026-08-25,2026-08-28,4,5.52,2.12,0.76,0.43,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,342.92
+C6,16,17.957416249999998,80.7918225,2026-08-25,2026-08-28,4,4.11,2.54,0.53,0.32,insufficient_evidence,No nearby industrial zone,Upper Sileru Power House,Thermal power plant,129.54
+C32,4,18.5761625,72.24053500000001,2026-08-25,2026-08-25,1,6.71,4.58,0.35,0.05,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,66.63
+C89,2,21.37698,81.67782,2026-08-25,2026-08-25,1,1.85,1.48,0.21,0.38,industrial_fire,Within known industrial zone,Unnamed industrial facility,Industrial area,0.64
+C5,20,21.74841,83.8433725,2026-08-25,2026-08-28,4,18.05,5.88,0.79,0.36,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,18.1
+C90,2,21.813005,83.89579,2026-08-25,2026-08-25,1,0.53,0.46,0.08,0.01,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,9.82
+C21,5,22.93298,69.69864199999999,2026-08-25,2026-08-25,1,3.76,2.58,0.35,0.39,industrial_fire,Within known industrial zone,Unnamed industrial facility,Thermal power plant,0.59
+C52,3,25.38837,68.58200666666666,2026-08-25,2026-08-25,1,2.1,1.82,0.21,0.0,insufficient_evidence,No nearby industrial zone,Bhuj Sector 98,Industrial area,259.76
+C8,12,25.9428025,72.1917275,2026-08-25,2026-08-28,4,21.83,8.12,0.86,0.33,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,272.27
+C53,3,26.094086666666666,68.87890666666668,2026-08-25,2026-08-27,3,3.11,1.62,0.32,0.04,insufficient_evidence,No nearby industrial zone,Bhuj Sector 95,Industrial area,323.94
+C12,8,28.42463625,69.69999874999999,2026-08-25,2026-08-28,4,4.54,1.78,0.64,0.32,insufficient_evidence,No nearby industrial zone,Khisara,Thermal power plant,563.74
+C91,2,19.820945000000002,79.23766,2026-08-25,2026-08-28,4,0.86,0.8,0.18,0.2,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,233.25
+C2,25,21.105503199999998,72.64164120000001,2026-08-25,2026-08-28,4,11.92,4.29,0.85,0.98,persistent_industrial_source,Within known industrial zone,ArcelorMittal Nippon Steel India,Industrial works,0.54
+C33,4,22.41728,69.0393325,2026-08-25,2026-08-26,2,2.63,1.38,0.44,0.21,insufficient_evidence,No nearby industrial zone,Port,Industrial area,58.79
+C92,2,8.690545,80.847565,2026-08-26,2026-08-26,1,4.04,2.96,0.34,0.0,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,430.67
+C93,2,8.775645,80.87497,2026-08-26,2026-08-26,1,6.12,5.68,0.34,0.0,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,421.95
+C22,5,8.87595,80.67142600000001,2026-08-26,2026-08-26,1,21.83,13.49,0.43,0.01,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,407.28
+C94,2,8.995955,80.83933999999999,2026-08-26,2026-08-26,1,7.74,5.0,0.45,0.0,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,397.04
+C23,5,9.002478,80.677052,2026-08-26,2026-08-28,3,7.86,4.52,0.63,0.24,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,393.57
+C95,2,9.040195,80.67593500000001,2026-08-26,2026-08-26,1,7.94,6.29,0.4,0.0,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,389.28
+C96,2,9.078565000000001,80.471285,2026-08-26,2026-08-26,1,4.93,3.36,0.39,0.03,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,382.3
+C54,3,9.389380000000001,78.88473333333333,2026-08-26,2026-08-26,1,21.77,11.1,0.49,0.01,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,372.29
+C97,2,9.80394,78.17557500000001,2026-08-26,2026-08-26,1,4.38,4.19,0.29,0.0,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,360.87
+C55,3,9.916036666666665,78.07839666666666,2026-08-26,2026-08-28,3,5.83,5.58,0.34,0.01,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,356.28
+C56,3,10.052463333333334,77.95327333333334,2026-08-26,2026-08-26,1,10.17,8.62,0.4,0.01,insufficient_evidence,No nearby industrial zone,"SIPCOT Mamandur, Cheyyar",Industrial area,350.03
+C98,2,12.13041,79.65351,2026-08-26,2026-08-26,1,24.35,18.89,0.45,0.04,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,56.6
+C15,7,13.834187142857143,79.25659571428571,2026-08-26,2026-08-28,3,15.31,3.63,0.6,0.24,insufficient_evidence,No nearby industrial zone,Amararaja Batteries Small Batteries Division,Industrial works,30.41
+C99,2,14.259685,80.117955,2026-08-26,2026-08-26,1,9.65,7.54,0.42,0.02,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,40.67
+C57,3,22.357319999999998,82.30393,2026-08-26,2026-08-26,1,8.21,6.92,0.37,0.01,insufficient_evidence,No nearby industrial zone,Bhandhakhar Power Station,Thermal power plant,13.61
+C100,2,28.515705,68.00283,2026-08-26,2026-08-26,1,1.93,1.76,0.19,0.01,insufficient_evidence,No nearby industrial zone,Bhuj Sector 98,Industrial area,606.53
+C3,23,29.911556956521736,74.95094565217391,2026-08-26,2026-08-27,2,34.97,12.88,0.71,0.23,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,191.24
+C7,14,20.793794285714284,85.25679142857143,2026-08-26,2026-08-27,2,11.97,2.75,0.61,0.82,industrial_fire,Within known industrial zone,Tata Steel Meramandali,Industrial area,1.36
+C16,7,20.867498571428573,84.98988857142858,2026-08-26,2026-08-27,2,5.94,3.14,0.5,0.78,industrial_fire,Within known industrial zone,Angul Steel Plant,Industrial area,1.31
+C58,3,22.92569333333333,69.82334999999999,2026-08-25,2026-08-26,2,2.03,1.49,0.33,0.85,industrial_fire,Within known industrial zone,Unnamed industrial facility,Industrial area,0.15
+C101,2,23.11914,70.083315,2026-08-26,2026-08-27,2,1.73,1.6,0.24,0.83,industrial_fire,Within known industrial zone,Unnamed industrial facility,Industrial area,0.8
+C9,12,23.5581025,87.23902166666669,2026-08-25,2026-08-29,5,2.57,1.46,0.47,0.34,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial works,33.4
+C59,3,23.615223333333333,86.79007333333334,2026-08-26,2026-08-26,1,3.56,2.86,0.27,0.19,industrial_fire,Adjacent to industrial zone,Unnamed industrial facility,Industrial area,4.87
+C17,7,13.712188571428571,79.62054285714285,2026-08-26,2026-08-28,3,2.67,1.46,0.47,0.88,persistent_industrial_source,Within known industrial zone,Unnamed industrial facility,Industrial area,1.31
+C102,2,15.00383,76.999625,2026-08-26,2026-08-26,1,4.52,2.6,0.42,0.02,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,302.85
+C103,2,15.023245,78.01422500000001,2026-08-26,2026-08-27,2,2.22,1.67,0.32,0.2,insufficient_evidence,No nearby industrial zone,"APSRTC Bus Depot , Venkatagiri",Industrial area,208.03
+C34,4,15.1696675,76.381675,2026-08-26,2026-08-27,2,1.39,0.99,0.27,0.24,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,370.97
+C104,2,15.17339,76.78565499999999,2026-08-26,2026-08-28,3,1.18,1.0,0.22,0.2,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,331.56
+C18,7,15.176277142857144,77.10131857142856,2026-08-26,2026-08-28,3,1.81,1.19,0.36,0.39,insufficient_evidence,No nearby industrial zone,"APSRTC Bus Depot , Venkatagiri",Industrial area,300.97
+C105,2,15.30115,76.21867,2026-08-26,2026-08-26,1,0.8,0.74,0.11,0.01,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,392.85
+C13,8,15.3360225,76.28219625,2026-08-25,2026-08-28,4,3.12,1.54,0.47,0.31,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,388.66
+C24,5,18.683208,73.033826,2026-08-26,2026-08-26,1,2.8,1.84,0.27,0.39,industrial_fire,Within known industrial zone,JSW Ispat Steel Plant,Industrial area,1.14
+C106,2,18.95705,73.94359499999999,2026-08-26,2026-08-26,1,2.58,2.41,0.23,0.02,insufficient_evidence,No nearby industrial zone,TATA Bhivpuri Hydroelectric Power Plant,Thermal power plant,51.73
+C25,5,11.181104000000001,79.098582,2026-08-26,2026-08-28,3,2.46,1.34,0.48,0.39,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,177.8
+C35,4,11.268445,80.00476499999999,2026-08-26,2026-08-28,3,1.56,1.23,0.3,0.23,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,138.15
+C10,10,11.81412,77.919277,2026-08-26,2026-08-28,3,2.88,1.5,0.46,0.35,insufficient_evidence,No nearby industrial zone,"SIPCOT Mamandur, Cheyyar",Industrial area,214.01
+C107,2,8.079155,81.34714500000001,2026-08-27,2026-08-27,1,5.76,4.69,0.37,0.0,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,508.99
+C26,5,8.1528,81.328774,2026-08-27,2026-08-27,1,5.72,3.77,0.33,0.0,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,499.62
+C36,4,8.185699999999999,81.21588,2026-08-27,2026-08-27,1,4.85,3.74,0.31,0.01,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,494.1
+C108,2,8.537365000000001,77.95384,2026-08-27,2026-08-27,1,2.88,2.88,0.23,0.0,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,497.35
+C109,2,8.898665000000001,80.48221000000001,2026-08-27,2026-08-27,1,9.27,7.42,0.41,0.03,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,402.51
+C37,4,9.130655,77.844155,2026-08-27,2026-08-27,1,5.56,4.61,0.35,0.0,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,444.0
+C38,4,9.150095,80.72457,2026-08-27,2026-08-28,2,71.88,36.35,0.46,0.01,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,377.55
+C110,2,9.304715,78.814625,2026-08-27,2026-08-27,1,6.54,3.76,0.34,0.02,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,383.51
+C111,2,9.42203,80.41814,2026-08-27,2026-08-28,2,5.18,3.68,0.31,0.03,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,342.98
+C112,2,9.42852,80.367165,2026-08-26,2026-08-27,2,7.33,5.68,0.36,0.01,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,343.01
+C39,4,9.456062500000002,80.4853025,2026-08-26,2026-08-27,2,10.63,5.04,0.38,0.01,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,340.99
+C113,2,12.19774,79.717285,2026-08-27,2026-08-27,1,2.89,2.84,0.23,0.01,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,47.06
+C60,3,26.631883333333334,70.38718,2026-08-27,2026-08-27,1,6.8,4.75,0.39,0.0,insufficient_evidence,No nearby industrial zone,Adhoi (Pasakayara),Thermal power plant,362.11
+C61,3,27.730186666666665,68.73489,2026-08-27,2026-08-27,1,6.08,5.36,0.36,0.0,insufficient_evidence,No nearby industrial zone,Khisara,Thermal power plant,503.47
+C62,3,31.397223333333333,72.43560000000001,2026-08-27,2026-08-27,1,6.59,6.02,0.36,0.0,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,482.69
+C27,5,22.789532,86.202366,2026-08-25,2026-08-27,3,3.24,1.55,0.43,0.85,industrial_fire,Within known industrial zone,Tata Steel,Industrial area,0.52
+C63,3,23.663996666666666,87.15736666666668,2026-08-25,2026-08-27,3,2.08,1.59,0.31,0.21,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,20.74
+C114,2,23.68668,87.12185,2026-08-27,2026-08-29,3,3.21,1.81,0.44,0.2,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,16.67
+C115,2,29.08415,88.01296500000001,2026-08-27,2026-08-28,2,2.79,2.13,0.34,0.26,insufficient_evidence,No nearby industrial zone,Tapovan,Thermal power plant,528.94
+C28,5,29.463952,76.86926000000001,2026-08-25,2026-08-27,3,7.66,3.8,0.45,0.07,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,54.67
+C40,4,9.49657,77.6193725,2026-08-27,2026-08-29,3,4.45,1.66,0.3,0.11,insufficient_evidence,No nearby industrial zone,"SIPCOT Mamandur, Cheyyar",Industrial area,421.77
+C116,2,11.110045,77.76637,2026-08-27,2026-08-27,1,1.12,0.78,0.19,0.01,insufficient_evidence,No nearby industrial zone,"SIPCOT Mamandur, Cheyyar",Industrial area,272.75
+C64,3,15.844263333333332,79.77378333333333,2026-08-27,2026-08-27,1,3.7,2.1,0.34,0.01,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,209.26
+C41,4,15.9892025,78.4023825,2026-08-26,2026-08-28,3,2.89,2.27,0.33,0.2,insufficient_evidence,No nearby industrial zone,"APSRTC Bus Depot , Venkatagiri",Industrial area,261.29
+C42,4,17.4638275,80.6528375,2026-08-27,2026-08-28,2,2.91,2.01,0.37,0.22,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,152.48
+C65,3,8.305563333333334,77.63869333333334,2026-08-27,2026-08-27,1,2.34,1.67,0.25,0.0,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,535.48
+C66,3,8.408846666666667,80.75669666666666,2026-08-27,2026-08-27,1,1.51,0.76,0.15,0.01,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,459.95
+C67,3,13.39335,80.10136666666666,2026-08-27,2026-08-27,1,2.51,1.73,0.29,0.37,industrial_fire,Within known industrial zone,Unnamed industrial facility,Industrial area,0.91
+C117,2,15.33378,76.24683999999999,2026-08-26,2026-08-27,2,0.78,0.72,0.18,0.21,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,391.47
+C20,6,8.710698333333333,77.97424833333334,2026-08-28,2026-08-28,1,19.0,7.18,0.51,0.03,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,478.94
+C118,2,8.726355,80.74835,2026-08-28,2026-08-28,1,7.24,6.94,0.36,0.01,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,424.97
+C43,4,8.734482499999999,78.10169,2026-08-28,2026-08-29,2,9.62,6.21,0.42,0.0,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,471.0
+C19,7,9.283264285714285,78.3964942857143,2026-08-28,2026-08-28,1,7.43,4.7,0.4,0.05,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,402.1
+C68,3,14.491176666666668,79.70998999999999,2026-08-28,2026-08-28,1,6.57,6.2,0.36,0.0,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,61.74
+C119,2,15.02354,79.75197499999999,2026-08-26,2026-08-28,3,5.67,4.09,0.33,0.0,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,118.03
+C120,2,15.63581,79.58577500000001,2026-08-28,2026-08-28,1,7.27,6.02,0.39,0.01,insufficient_evidence,No nearby industrial zone,"APSRTC Bus Depot , Venkatagiri",Industrial area,187.93
+C121,2,9.331050000000001,77.5255,2026-08-28,2026-08-28,1,4.97,3.34,0.31,0.01,insufficient_evidence,No nearby industrial zone,"SIPCOT Mamandur, Cheyyar",Industrial area,443.09
+C122,2,9.416055,77.509465,2026-08-28,2026-08-28,1,2.78,2.12,0.28,0.0,insufficient_evidence,No nearby industrial zone,"SIPCOT Mamandur, Cheyyar",Industrial area,435.86
+C69,3,22.928366666666665,70.10733,2026-08-25,2026-08-28,4,6.26,3.92,0.57,0.89,persistent_industrial_source,Within known industrial zone,Tuna-Tekra Container Terminal,Industrial area,1.06
+C123,2,29.272455,71.179745,2026-08-28,2026-08-28,1,4.02,3.7,0.29,0.02,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,520.28
+C124,2,24.116385,86.86024,2026-08-28,2026-08-28,1,1.75,1.5,0.19,0.02,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,21.83
+C125,2,15.66023,73.98793,2026-08-28,2026-08-28,1,0.86,0.8,0.11,0.04,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,329.83
+C14,8,8.1204775,80.8075575,2026-08-28,2026-08-28,1,2.69,1.9,0.29,0.02,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,492.82
+C44,4,10.610945000000001,77.4233125,2026-08-27,2026-08-28,2,0.58,0.4,0.21,0.24,insufficient_evidence,No nearby industrial zone,"SIPCOT Mamandur, Cheyyar",Industrial area,337.58
+C126,2,31.770195,70.10818,2026-08-28,2026-08-28,1,2.36,1.4,0.32,0.02,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,694.02
+C70,3,20.910796666666666,71.45964666666667,2026-08-25,2026-08-28,4,2.89,1.57,0.5,0.9,persistent_industrial_source,Within known industrial zone,Unnamed industrial facility,Industrial area,0.26
+C127,2,31.657964999999997,78.40446,2026-08-29,2026-08-29,1,5.95,4.99,0.34,0.01,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,305.34
+C128,2,8.606795,77.96981,2026-08-29,2026-08-29,1,3.44,3.07,0.26,0.01,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,489.57
+C129,2,8.6502,77.83815,2026-08-29,2026-08-29,1,2.82,2.37,0.26,0.0,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,491.62
+C130,2,9.383165,80.45058,2026-08-29,2026-08-29,1,5.38,5.1,0.33,0.01,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,348.4
+C131,2,9.41475,80.447285,2026-08-29,2026-08-29,1,3.19,3.19,0.25,0.01,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,345.17
+C132,2,15.467225,80.16393,2026-08-29,2026-08-29,1,5.8,5.8,0.33,0.0,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,169.08
+C71,3,20.965766666666667,86.01139666666666,2026-08-26,2026-08-28,3,4.14,3.53,0.28,0.37,industrial_fire,Within known industrial zone,TATA Steel,Industrial area,0.91
+C11,9,20.966776666666668,85.17998444444444,2026-08-26,2026-08-27,2,17.78,7.73,0.51,0.19,industrial_fire,Adjacent to industrial zone,Unnamed industrial facility,Industrial area,3.25
+C133,2,8.54169,80.78215499999999,2026-08-27,2026-08-28,2,5.66,3.96,0.33,0.03,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,446.85
+C134,2,22.020069999999997,85.4948,2026-08-28,2026-08-28,1,24.28,23.4,0.4,0.03,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,6.66
+C135,2,30.89269,73.191385,2026-08-25,2026-08-25,1,14.19,12.9,0.39,0.01,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,390.64
+C136,2,31.029055,73.36923,2026-08-25,2026-08-25,1,9.86,7.29,0.43,0.0,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,386.68
+C137,2,26.760505000000002,83.198765,2026-08-25,2026-08-26,2,1.23,1.08,0.22,0.21,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,346.33
+C138,2,17.608085,83.201,2026-08-25,2026-08-25,1,1.83,1.83,0.17,0.41,industrial_fire,Within known industrial zone,Unnamed industrial facility,Thermal power plant,0.36
+C139,2,21.196175,81.41427999999999,2026-08-25,2026-08-25,1,2.93,2.93,0.23,0.37,industrial_fire,Within known industrial zone,Bhilai 500 MW Expansion Power Project,Thermal power plant,1.17
+C140,2,22.80032,86.091025,2026-08-25,2026-08-27,3,2.85,2.79,0.3,0.79,industrial_fire,Within known industrial zone,Adityapur Works Power Station,Thermal power plant,0.45
+C141,2,22.340585,69.85508,2026-08-25,2026-08-25,1,3.06,2.62,0.24,0.37,industrial_fire,Within known industrial zone,Unnamed industrial facility,Industrial area,0.53
+C72,3,15.110999999999999,76.80565333333332,2026-08-25,2026-08-28,4,2.57,1.83,0.31,0.22,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,326.55
+C142,2,8.738965,80.797945,2026-08-26,2026-08-26,1,7.13,6.27,0.38,0.0,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,424.62
+C143,2,8.7449,80.654605,2026-08-26,2026-08-26,1,13.98,12.08,0.39,0.04,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,421.43
+C73,3,8.808283333333334,80.58648000000001,2026-08-26,2026-08-26,1,17.72,12.52,0.43,0.02,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,413.66
+C144,2,8.90104,80.580035,2026-08-26,2026-08-28,3,7.44,5.88,0.36,0.0,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,402.4
+C145,2,8.952915,80.37089499999999,2026-08-26,2026-08-26,1,4.33,4.33,0.29,0.0,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,395.46
+C146,2,9.217315,78.64877,2026-08-26,2026-08-26,1,3.51,3.01,0.29,0.0,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,398.66
+C147,2,9.481285,80.40179,2026-08-26,2026-08-26,1,5.07,4.36,0.34,0.0,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,337.06
+C148,2,29.954524999999997,72.59716,2026-08-26,2026-08-26,1,3.11,3.11,0.24,0.0,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,398.08
+C149,2,30.080105,71.96665,2026-08-26,2026-08-26,1,6.61,4.38,0.43,0.02,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,460.27
+C74,3,20.76299333333333,85.29345,2026-08-26,2026-08-26,1,2.11,1.8,0.22,0.15,insufficient_evidence,Adjacent to industrial zone,Unnamed industrial facility,Thermal power plant,4.78
+C150,2,28.052735,69.36952,2026-08-26,2026-08-27,2,4.2,2.42,0.48,0.2,insufficient_evidence,No nearby industrial zone,Khisara,Thermal power plant,525.77
+C151,2,22.321085,69.88206,2026-08-26,2026-08-26,1,1.49,1.45,0.15,0.39,industrial_fire,Within known industrial zone,Unnamed industrial facility,Thermal power plant,1.5
+C152,2,23.315655,70.48671,2026-08-26,2026-08-26,1,1.62,1.42,0.16,0.36,industrial_fire,Within known industrial zone,Unnamed industrial facility,Industrial area,0.35
+C153,2,11.033,77.5892,2026-08-27,2026-08-27,1,4.86,4.57,0.32,0.01,insufficient_evidence,No nearby industrial zone,"SIPCOT Mamandur, Cheyyar",Industrial area,292.86
+C154,2,17.062725,76.97904,2026-08-27,2026-08-28,2,1.5,1.4,0.23,0.23,insufficient_evidence,No nearby industrial zone,Pawana Hydroelectric Power Station,Thermal power plant,410.17
+C45,4,17.1410525,77.1799125,2026-08-27,2026-08-28,2,1.4,1.13,0.24,0.22,insufficient_evidence,No nearby industrial zone,Pawana Hydroelectric Power Station,Thermal power plant,426.25
+C155,2,8.409975,80.82683499999999,2026-08-28,2026-08-28,1,5.41,4.32,0.36,0.0,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,461.01
+C156,2,8.644005,80.927535,2026-08-28,2026-08-28,1,28.26,24.73,0.42,0.0,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,437.27
+C157,2,8.988890000000001,77.81988000000001,2026-08-28,2026-08-28,1,3.48,2.66,0.31,0.0,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,458.9
+C158,2,9.185459999999999,77.78824499999999,2026-08-28,2026-08-28,1,9.06,8.86,0.37,0.0,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,441.77
+C159,2,9.73908,78.348315,2026-08-28,2026-08-28,1,5.67,5.5,0.33,0.0,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,358.06
+C160,2,9.96201,78.395435,2026-08-28,2026-08-28,1,1.75,1.34,0.17,0.0,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,333.72
+C161,2,11.24629,77.76933,2026-08-28,2026-08-28,1,3.3,3.24,0.26,0.0,insufficient_evidence,No nearby industrial zone,"SIPCOT Mamandur, Cheyyar",Industrial area,262.62
+C162,2,11.97412,79.74443,2026-08-28,2026-08-28,1,3.39,3.04,0.26,0.01,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,70.3
+C46,4,14.65971,75.6541425,2026-08-28,2026-08-28,1,12.84,11.66,0.41,0.02,insufficient_evidence,No nearby industrial zone,Amararaja Batteries Small Batteries Division,Industrial works,429.09
+C163,2,15.08861,79.77672999999999,2026-08-28,2026-08-28,1,21.57,18.25,0.43,0.0,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,125.48
+C164,2,16.133325,77.827395,2026-08-28,2026-08-28,1,10.46,8.41,0.37,0.02,insufficient_evidence,No nearby industrial zone,"APSRTC Bus Depot , Venkatagiri",Industrial area,308.26
+C75,3,25.036060000000003,87.38778333333335,2026-08-28,2026-08-29,2,3.58,2.43,0.41,0.21,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,81.47
+C165,2,26.266855,74.187655,2026-08-28,2026-08-28,1,1.44,1.03,0.21,0.01,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,276.71
+C166,2,8.67013,77.993825,2026-08-28,2026-08-28,1,0.44,0.44,0.07,0.02,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,482.17
+C76,3,8.880939999999999,80.72534333333333,2026-08-29,2026-08-29,1,5.66,4.71,0.35,0.01,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,407.73
+C167,2,14.549714999999999,79.809335,2026-08-29,2026-08-29,1,4.3,3.76,0.31,0.0,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,65.62
+C168,2,14.650905,77.66803999999999,2026-08-29,2026-08-29,1,5.27,4.72,0.34,0.01,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,221.2

@@ -1,0 +1,9 @@
+flask
+pandas
+numpy
+folium
+geopandas
+osmnx
+requests
+scikit-learn
+joblib

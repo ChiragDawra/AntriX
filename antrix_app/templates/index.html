@@ -1,0 +1,3703 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title> SATAT - Industrial Thermal Anomaly Detection</title>
+
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap"
+rel="stylesheet">
+
+<style>
+
+:root {
+  --bg: #07070d;
+  --panel: #0b0a13;
+  --panel2: #100d1d;
+  --panel3: #151126;
+
+  --border: #27223b;
+  --border2: #33284d;
+
+  --text: #f5f3ff;
+  --text2: #ddd8ee;
+  --dim: #9690aa;
+  --dim2: #777187;
+
+  --purple: #8b3dff;
+  --purple2: #a855f7;
+  --purple3: #c084fc;
+
+  --red: #ff465c;
+  --red2: #dc263f;
+
+  --orange: #ff9d38;
+  --orange2: #e87917;
+
+  --gray: #89869d;
+  --green: #19c38a;
+
+  --navy: #0c0920;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  overflow: hidden;
+}
+
+/* =========================================================
+   TOP BAR
+========================================================= */
+
+#topbar {
+  height: 76px;
+
+  background:
+    linear-gradient(
+      115deg,
+      #08070f 0%,
+      #10091e 45%,
+      #0b0817 100%
+    );
+
+  border-bottom: 1px solid #29213d;
+
+  display: flex;
+  align-items: center;
+
+  padding: 0 32px;
+
+  box-shadow:
+    0 8px 30px rgba(0,0,0,.35);
+
+  position: relative;
+  z-index: 1000;
+}
+
+#brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+#mark {
+  width: 38px;
+  height: 38px;
+
+  border-radius: 9px;
+
+  background: transparent;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  overflow: hidden;
+
+  box-shadow:
+    0 0 18px rgba(139,61,255,.18);
+}
+
+#mark img {
+  width: 100%;
+  height: 100%;
+
+  object-fit: contain;
+
+  display: block;
+}
+
+#logo {
+  font-weight: 800;
+  font-size: 19px;
+  color: #fff;
+  letter-spacing: -.3px;
+  line-height: 1.1;
+}
+
+#tagline {
+  font-size: 11.5px;
+  color: #8e879f;
+  margin-top: 2px;
+}
+
+#stats {
+  display: flex;
+  margin-left: auto;
+}
+
+.stat {
+  padding: 0 24px;
+  border-left: 1px solid rgba(255,255,255,.08);
+  text-align: right;
+}
+
+.stat .val {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 21px;
+  color: #fff;
+  line-height: 1;
+}
+
+.stat .lbl {
+  font-size: 10.5px;
+  color: #777187;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+
+  margin-top: 5px;
+
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+
+  gap: 6px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* =========================================================
+   LAYOUT
+========================================================= */
+
+#layout {
+  display: flex;
+  height: calc(100vh - 76px);
+}
+
+#map {
+  flex: 1;
+  position: relative;
+  background: #050509;
+}
+
+#feed {
+  width: 400px;
+  flex-shrink: 0;
+
+  background:
+    linear-gradient(
+      180deg,
+      #0b0913 0%,
+      #090810 100%
+    );
+
+  border-left: 1px solid #2b2340;
+
+  display: flex;
+  flex-direction: column;
+
+  overflow: hidden;
+
+  min-width: 0;
+
+  box-shadow:
+    -12px 0 35px rgba(0,0,0,.25);
+}
+
+/* =========================================================
+   RESIZE HANDLE
+========================================================= */
+
+#resize-handle {
+  width: 14px;
+  flex-shrink: 0;
+
+  background: #090810;
+
+  border-left: 1px solid #241d35;
+  border-right: 1px solid #241d35;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: ew-resize;
+  user-select: none;
+
+  z-index: 900;
+}
+
+#resize-handle:hover {
+  background: #151022;
+}
+
+#resize-handle.dragging {
+  background: #211533;
+}
+
+/* =========================================================
+   FEED
+========================================================= */
+
+#feed-header {
+  padding: 20px 22px 14px;
+}
+
+#feed-header h2 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f5f3ff;
+}
+
+#feed-header .sub {
+  color: #8f89a4;
+  font-size: 12px;
+  margin-top: 3px;
+}
+
+#filters {
+  display: flex;
+  gap: 6px;
+
+  padding: 0 18px 14px;
+
+  border-bottom: 1px solid #211b31;
+}
+
+.filter-btn {
+  font-family: 'Inter';
+
+  font-size: 11.5px;
+  font-weight: 600;
+
+  padding: 6px 12px;
+
+  border-radius: 20px;
+
+  border: 1px solid #302746;
+
+  background: #0c0a14;
+
+  color: #9a93ad;
+
+  cursor: pointer;
+
+  transition: .15s ease;
+}
+
+.filter-btn:hover {
+  border-color: #7340bd;
+  color: #ddd6ef;
+}
+
+.filter-btn.active {
+  background:
+    linear-gradient(
+      135deg,
+      #35106d,
+      #5d1cad
+    );
+
+  color: #fff;
+
+  border-color: #8743e8;
+
+  box-shadow:
+    0 0 16px rgba(139,61,255,.18);
+}
+
+#sortrow {
+  display: flex;
+  gap: 6px;
+
+  padding: 10px 18px;
+
+  border-bottom: 1px solid #211b31;
+
+  align-items: center;
+}
+
+/* =========================================================
+   FEED ITEMS
+========================================================= */
+
+#feed-list {
+  flex: 1;
+  overflow-y: auto;
+
+  padding: 14px 16px;
+}
+
+#feed-list::-webkit-scrollbar,
+#ev-body::-webkit-scrollbar {
+  width: 7px;
+}
+
+#feed-list::-webkit-scrollbar-thumb,
+#ev-body::-webkit-scrollbar-thumb {
+  background: #302742;
+  border-radius: 10px;
+}
+
+.feed-item {
+  background:
+    linear-gradient(
+      135deg,
+      #0d0b15,
+      #0b0911
+    );
+
+  border: 1px solid #272136;
+
+  border-left: 3px solid var(--gray);
+
+  border-radius: 9px;
+
+  padding: 12px 14px;
+
+  margin-bottom: 10px;
+
+  cursor: pointer;
+
+  transition:
+    border-color .15s ease,
+    background .15s ease,
+    transform .15s ease;
+}
+
+.feed-item:hover {
+  background: #11101a;
+  border-color: #3c3154;
+  transform: translateX(-1px);
+}
+
+.feed-item.industrial_fire {
+  border-left-color: var(--red);
+}
+
+.feed-item.persistent_industrial_source {
+  border-left-color: var(--orange);
+}
+
+.feed-item.insufficient_evidence {
+  border-left-color: var(--gray);
+}
+
+.feed-item .row1 {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.feed-item .label {
+  font-weight: 700;
+  font-size: 11.5px;
+
+  text-transform: uppercase;
+  letter-spacing: .4px;
+
+  color: var(--gray);
+}
+
+.feed-item.industrial_fire .label {
+  color: var(--red);
+}
+
+.feed-item.persistent_industrial_source .label {
+  color: var(--orange);
+}
+
+.feed-item .conf {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.feed-item .meta {
+  color: #8d879f;
+  font-size: 11.5px;
+  margin-top: 5px;
+}
+
+.feed-item .meta b {
+  color: #e9e4f2;
+  font-weight: 600;
+}
+
+/* =========================================================
+   MAP LEGEND
+========================================================= */
+
+#legend {
+  position: absolute;
+
+  bottom: 24px;
+  left: 24px;
+
+  z-index: 500;
+
+  background:
+    rgba(8,7,13,.94);
+
+  border: 1px solid #302741;
+
+  padding: 16px 20px;
+
+  border-radius: 12px;
+
+  font-size: 13px;
+
+  box-shadow:
+    0 12px 35px rgba(0,0,0,.45);
+
+  backdrop-filter: blur(10px);
+}
+
+#legend .title {
+  font-weight: 700;
+  font-size: 11px;
+
+  margin-bottom: 10px;
+
+  color: #a09aaf;
+
+  text-transform: uppercase;
+  letter-spacing: .6px;
+}
+
+#legend .row {
+  margin: 7px 0;
+
+  display: flex;
+  align-items: center;
+
+  gap: 9px;
+
+  color: #e8e4ef;
+}
+
+/* =========================================================
+   CONNECTOR
+========================================================= */
+
+#connector-line {
+  position: fixed;
+
+  height: 1.5px;
+
+  background:
+    repeating-linear-gradient(
+      to right,
+      #8b3dff 0 4px,
+      transparent 4px 7px
+    );
+
+  pointer-events: none;
+
+  z-index: 1500;
+
+  display: none;
+
+  box-shadow:
+    0 0 7px rgba(139,61,255,.6);
+}
+
+/* =========================================================
+   LEAFLET
+========================================================= */
+
+.leaflet-control-zoom {
+  border: none !important;
+  box-shadow: 0 8px 25px rgba(0,0,0,.35) !important;
+}
+
+.leaflet-control-zoom a {
+  background: #11101a !important;
+  color: #eee !important;
+  border-color: #302841 !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: #21152e !important;
+}
+
+/* =========================================================
+   DETAIL VIEW
+========================================================= */
+
+#detail-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+#ev-head {
+  padding: 15px 20px 18px;
+
+  color: #fff;
+
+  flex-shrink: 0;
+
+  position: relative;
+
+  background:
+    linear-gradient(
+      135deg,
+      #24113e,
+      #100b1c
+    );
+
+  border-bottom: 1px solid rgba(255,255,255,.12);
+
+  box-shadow:
+    inset 0 -20px 45px rgba(0,0,0,.15);
+}
+
+#ev-head.industrial {
+  background:
+    linear-gradient(
+      135deg,
+      #7d1527 0%,
+      #43101e 48%,
+      #170b13 100%
+    );
+}
+
+#ev-head.persistent {
+  background:
+    linear-gradient(
+      135deg,
+      #a84b10 0%,
+      #60300f 45%,
+      #1c1009 100%
+    );
+}
+
+#ev-head.insufficient {
+  background:
+    linear-gradient(
+      135deg,
+      #40395d 0%,
+      #27233c 45%,
+      #100d1a 100%
+    );
+}
+
+#ev-head .tag {
+  font-size: 10px;
+
+  font-family: 'JetBrains Mono';
+
+  opacity: .82;
+
+  text-transform: uppercase;
+
+  letter-spacing: .6px;
+
+  margin-top: 8px;
+
+  word-break: break-word;
+}
+
+#ev-head .title {
+  font-size: 18px;
+
+  font-weight: 800;
+
+  margin-top: 4px;
+
+  opacity: .98;
+
+  word-break: break-word;
+}
+
+#ev-head .score {
+  font-family: 'JetBrains Mono';
+
+  font-size: 20px;
+
+  font-weight: 700;
+
+  margin-top: 6px;
+}
+
+#ev-controls {
+  display: flex;
+  gap: 7px;
+
+  margin-top: 8px;
+}
+
+#ev-body {
+  padding: 14px 20px 20px;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  flex: 1;
+
+  min-width: 0;
+
+  background:
+    linear-gradient(
+      180deg,
+      #0b0912 0%,
+      #090810 100%
+    );
+}
+
+.ev-section-title {
+  font-size: 10px;
+
+  font-weight: 700;
+
+  color: #a49caf;
+
+  text-transform: uppercase;
+
+  letter-spacing: .55px;
+
+  margin: 14px 0 7px;
+}
+
+.ev-row {
+  display: flex;
+
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 6px 0;
+
+  border-bottom: 1px solid #211c2c;
+
+  font-size: 12px;
+
+  gap: 8px;
+
+  min-width: 0;
+
+  color: #ddd8e7;
+}
+
+.ev-row > span:first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+
+  word-break: break-word;
+}
+
+.ev-row .bar-bg {
+  flex: 1 1 40px;
+
+  min-width: 30px;
+
+  height: 5px;
+
+  background: #211d2b;
+
+  border-radius: 3px;
+
+  margin: 0 10px;
+
+  overflow: hidden;
+}
+
+.ev-row .bar-fill {
+  height: 100%;
+
+  border-radius: 3px;
+}
+
+.ev-row .amt {
+  font-family: 'JetBrains Mono';
+
+  font-weight: 700;
+
+  font-size: 11.5px;
+
+  width: 42px;
+
+  flex-shrink: 0;
+
+  text-align: right;
+
+  color: #eeeaf5;
+}
+
+#ev-note {
+  background:
+    linear-gradient(
+      135deg,
+      #15111f,
+      #100d18
+    );
+
+  border: 1px solid #2b2438;
+
+  border-radius: 7px;
+
+  padding: 10px 12px;
+
+  font-size: 11px;
+
+  color: #a19aaa;
+
+  margin-top: 10px;
+
+  line-height: 1.45;
+}
+
+#ev-close {
+  background:
+    rgba(255,255,255,.12);
+
+  border: 1px solid rgba(255,255,255,.18);
+
+  color: #fff;
+
+  padding: 6px 12px;
+
+  border-radius: 14px;
+
+  cursor: pointer;
+
+  font-size: 11px;
+
+  font-weight: 600;
+
+  transition: .15s;
+}
+
+#ev-close:hover {
+  background: rgba(255,255,255,.2);
+}
+
+.map-ctrl-btn {
+  background:
+    rgba(255,255,255,.11);
+
+  border: 1px solid rgba(255,255,255,.16);
+
+  color: #fff;
+
+  padding: 5px 10px;
+
+  border-radius: 12px;
+
+  cursor: pointer;
+
+  font-size: 10px;
+
+  font-weight: 600;
+}
+
+.map-ctrl-btn:hover {
+  background: rgba(255,255,255,.2);
+}
+
+/* =========================================================
+   DETAIL SCORE CARDS
+========================================================= */
+
+.detail-card {
+  flex: 1;
+
+  background:
+    linear-gradient(
+      135deg,
+      #100e18,
+      #0d0b14
+    );
+
+  border: 1px solid #282239;
+
+  border-radius: 9px;
+
+  padding: 9px 11px;
+}
+
+.detail-card .small {
+  font-size: 9.5px;
+
+  color: #91899f;
+
+  text-transform: uppercase;
+
+  letter-spacing: .4px;
+}
+
+.detail-card .big {
+  font-family: 'JetBrains Mono';
+
+  font-weight: 700;
+
+  font-size: 16px;
+
+  margin-top: 3px;
+
+  color: #f4efff;
+}
+
+.detail-card .hint {
+  font-size: 9px;
+
+  color: #777183;
+
+  margin-top: 2px;
+}
+
+/* =========================================================
+   SATELLITE MAP
+========================================================= */
+
+#sat-map {
+  background: #050508;
+}
+
+/* =========================================================
+   MARKER CLUSTER
+========================================================= */
+
+.marker-cluster {
+  background: transparent !important;
+}
+
+.marker-cluster div {
+  background: transparent !important;
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media(max-width: 900px) {
+
+  #stats .stat {
+    padding: 0 10px;
+  }
+
+  #stats .stat:nth-child(1),
+  #stats .stat:nth-child(2) {
+    display: none;
+  }
+
+  #feed {
+    width: 360px;
+  }
+
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- =======================================================
+     TOP BAR
+======================================================= -->
+
+<div id="topbar">
+
+  <div id="brand">
+
+ <!-- LOGO IMAGE: served from Flask's static folder -->
+<div id="mark">
+  <img src="https://static.vecteezy.com/system/resources/previews/043/212/465/non_2x/a-logo-representing-industry-with-a-factory-in-the-background-a-modern-and-minimalist-symbol-representing-industrial-services-free-vector.jpg" alt="ANTRIX logo">
+</div>
+
+    <div>
+      <div id="logo">SATAT</div>
+
+      <div id="tagline">
+        Industrial Thermal Anomaly Detection
+      </div>
+    </div>
+
+  </div>
+
+  <div id="stats">
+
+    <div class="stat">
+      <div class="val" id="s-industrial">-</div>
+
+      <div class="lbl">
+        <span class="dot" style="background:#ff465c"></span>
+        Industrial
+      </div>
+    </div>
+
+    <div class="stat">
+      <div class="val" id="s-possible">-</div>
+
+      <div class="lbl">
+        <span class="dot" style="background:#ff9d38"></span>
+        Persistent
+      </div>
+    </div>
+
+    <div class="stat">
+      <div class="val" id="s-other">-</div>
+
+      <div class="lbl">
+        <span class="dot" style="background:#89869d"></span>
+        Insufficient Evidence
+      </div>
+    </div>
+
+    <div class="stat">
+      <div class="val" id="s-total">-</div>
+
+      <div class="lbl">
+        Total Detections
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+
+<div id="connector-line"></div>
+
+
+<div id="layout">
+
+  <div id="map">
+
+    <div id="legend">
+
+      <div class="title">
+        Classification
+      </div>
+
+      <div class="row">
+        <span class="dot" style="background:#ff465c"></span>
+        Industrial Fire
+      </div>
+
+      <div class="row">
+        <span class="dot" style="background:#ff9d38"></span>
+        Persistent Industrial Source
+      </div>
+
+      <div class="row">
+        <span class="dot" style="background:#89869d"></span>
+        Insufficient evidence
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <div id="resize-handle">
+
+    <svg width="14"
+         height="20"
+         viewBox="0 0 14 20"
+         fill="none">
+
+      <path
+        d="M5 4L1 10L5 16"
+        stroke="#89869d"
+        stroke-width="1.6"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+
+      <path
+        d="M9 4L13 10L9 16"
+        stroke="#89869d"
+        stroke-width="1.6"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+
+    </svg>
+
+  </div>
+
+
+  <div id="feed">
+
+    <div id="list-view"
+         style="display:flex;flex-direction:column;height:100%;">
+
+      <div id="feed-header">
+
+        <h2>
+          Recent FIRMS Detections
+        </h2>
+
+        <div class="sub" id="feed-sub">
+          Ranked by investigation priority · click any event for evidence
+        </div>
+
+      </div>
+
+
+      <div id="filters">
+
+        <button class="filter-btn active"
+                data-f="all">
+          All
+        </button>
+
+        <button class="filter-btn"
+                data-f="industrial_fire">
+          Industrial Fire
+        </button>
+
+        <button class="filter-btn"
+                data-f="persistent_industrial_source">
+          Persistent
+        </button>
+
+        <button class="filter-btn"
+                data-f="insufficient_evidence">
+          Insufficient
+        </button>
+
+      </div>
+
+
+      <div id="sortrow">
+
+        <span style="
+          font-size:11px;
+          color:#8f89a4;
+          font-weight:600;
+        ">
+          SORT BY
+        </span>
+
+        <button class="filter-btn sort-btn active"
+                data-s="risk">
+          Investigation Priority
+        </button>
+
+        <button class="filter-btn sort-btn"
+                data-s="fusion">
+          Fusion Score
+        </button>
+
+      </div>
+
+
+      <div id="feed-list"></div>
+
+    </div>
+
+
+    <div id="detail-view"
+         style="display:none;">
+
+      <div id="ev-head">
+
+        <div id="ev-controls">
+
+          <button id="ev-close"
+                  onclick="closePanel()">
+            ← Back to list
+          </button>
+
+          <button class="map-ctrl-btn"
+                  onclick="resetMapView()">
+            Reset Map
+          </button>
+
+          <button class="map-ctrl-btn"
+                  onclick="zoomToCurrentDetection()">
+            Zoom to Detection
+          </button>
+
+        </div>
+
+
+        <div class="tag"
+             id="ev-tag">
+          Event
+        </div>
+
+        <div class="title"
+             id="ev-title">
+          —
+        </div>
+
+        <div class="score"
+             id="ev-score">
+          —
+        </div>
+
+      </div>
+
+
+      <div id="ev-body">
+
+        <div id="ev-contributors"></div>
+
+
+        <div id="raw-signals-title"
+             class="ev-section-title">
+          Raw Signals
+        </div>
+
+        <div id="ev-signals"></div>
+
+
+        <div id="sat-context-title"
+             class="ev-section-title">
+          Satellite / Map Context
+        </div>
+
+        <div id="sat-caption"
+             style="
+               font-size:10.5px;
+               color:#91899f;
+               margin-bottom:6px;
+             ">
+        </div>
+
+        <div id="sat-map"
+             style="
+               height:180px;
+               width:100%;
+               box-sizing:border-box;
+               border-radius:8px;
+               overflow:hidden;
+               border:1px solid #2b2438;
+             ">
+        </div>
+
+        <div id="sat-note"
+             style="
+               font-size:10.5px;
+               color:#91899f;
+               margin-top:6px;
+               line-height:1.4;
+             ">
+        </div>
+
+
+        <div id="ev-note"></div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+<script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+
+
+<script>
+
+/* =========================================================
+   MAP
+========================================================= */
+
+const map = L.map('map', {
+  zoomControl: false
+}).setView([22.5,79],5);
+
+
+/* =========================================================
+   CONNECTOR
+========================================================= */
+
+function updateConnector() {
+
+  const line =
+    document.getElementById('connector-line');
+
+  if (
+    window.selectedMarkerIdx === null ||
+    document.getElementById('detail-view')
+      .style.display === 'none'
+  ) {
+
+    line.style.display = 'none';
+    return;
+  }
+
+  const d =
+    window.dataById[window.selectedMarkerIdx];
+
+  if (!d) {
+    line.style.display = 'none';
+    return;
+  }
+
+  const mapRect =
+    document.getElementById('map')
+      .getBoundingClientRect();
+
+  const point =
+    map.latLngToContainerPoint([
+      d.latitude,
+      d.longitude
+    ]);
+
+  const screenX =
+    mapRect.left + point.x;
+
+  const screenY =
+    mapRect.top + point.y;
+
+  const distToBoundary =
+    mapRect.right - screenX;
+
+  const THRESHOLD = 160;
+
+  if (
+    screenY < mapRect.top ||
+    screenY > mapRect.bottom ||
+    distToBoundary > THRESHOLD ||
+    distToBoundary < 0
+  ) {
+
+    line.style.display = 'none';
+    return;
+  }
+
+  line.style.display = 'block';
+
+  line.style.left =
+    screenX + 'px';
+
+  line.style.top =
+    (screenY - .75) + 'px';
+
+  line.style.width =
+    (mapRect.right - screenX) + 'px';
+}
+
+map.on(
+  'move zoom',
+  updateConnector
+);
+
+window.addEventListener(
+  'resize',
+  updateConnector
+);
+
+
+/* =========================================================
+   DARK MAP
+========================================================= */
+
+map.fitBounds([
+  [6.5,66.5],
+  [36.5,92.5]
+]);
+
+map.setMaxBounds([
+  [0,55],
+  [42,105]
+]);
+
+L.control.zoom({
+  position:'topright'
+}).addTo(map);
+
+
+/*
+  FIXED: Single combined dark tile layer.
+  The previous split dark_nolabels + dark_only_labels setup
+  requires a CARTO API key on the current free tier and was
+  showing "API KEY REQUIRED" watermarks over the whole map.
+  dark_all is the same free, no-key tile source used
+  successfully throughout the rest of this project.
+*/
+
+L.tileLayer(
+  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+  {
+    attribution: '© OpenStreetMap contributors © CARTO',
+    subdomains: 'abcd',
+    maxZoom: 20
+  }
+).addTo(map);
+
+/* =========================================================
+   COLORS
+========================================================= */
+
+const colors = {
+
+  industrial_fire:
+    '#ff465c',
+
+  persistent_industrial_source:
+    '#ff9d38',
+
+  insufficient_evidence:
+    '#89869d'
+
+};
+
+
+const labelNames = {
+
+  industrial_fire:
+    'Industrial Fire',
+
+  persistent_industrial_source:
+    'Persistent Industrial Source',
+
+  insufficient_evidence:
+    'Insufficient Evidence'
+
+};
+
+
+let allData = [];
+
+let currentSort = 'risk';
+
+
+/* =========================================================
+   PRIORITY COLORS
+========================================================= */
+
+const riskColors = {
+
+  Urgent:
+    '#ff465c',
+
+  High:
+    '#ff7a32',
+
+  Moderate:
+    '#ff9d38',
+
+  Low:
+    '#89869d'
+
+};
+
+
+function priorityTier(score) {
+
+  if (score >= .90)
+    return 'Urgent';
+
+  if (score >= .70)
+    return 'High';
+
+  if (score >= .40)
+    return 'Moderate';
+
+  return 'Low';
+
+}
+
+
+function fusionTier(score) {
+
+  if (score >= .6)
+    return 'High';
+
+  if (score >= .3)
+    return 'Moderate';
+
+  return 'Low';
+
+}
+
+
+/* =========================================================
+   STATS
+========================================================= */
+
+fetch('/api/stats')
+.then(r => r.json())
+.then(s => {
+
+  document.getElementById(
+    's-industrial'
+  ).textContent =
+    s.industrial_fire;
+
+  document.getElementById(
+    's-possible'
+  ).textContent =
+    s.persistent_industrial_source;
+
+  document.getElementById(
+    's-other'
+  ).textContent =
+    s.insufficient_evidence;
+
+  document.getElementById(
+    's-total'
+  ).textContent =
+    s.total;
+
+});
+
+
+let currentOpenDetection = null;
+
+
+/* =========================================================
+   CLUSTER PANEL
+========================================================= */
+
+function openClusterPanel(c) {
+
+  window.selectedMarkerIdx = null;
+
+  if (window.glowMarker) {
+
+    map.removeLayer(
+      window.glowMarker
+    );
+
+    window.glowMarker = null;
+  }
+
+  document.getElementById(
+    'connector-line'
+  ).style.display = 'none';
+
+  document.getElementById(
+    'list-view'
+  ).style.display = 'none';
+
+  document.getElementById(
+    'detail-view'
+  ).style.display = 'flex';
+
+  currentOpenDetection = null;
+
+  window.currentOpenCluster = c;
+
+  const color =
+    clusterLabelColors[
+      c.dominant_label
+    ] || '#89869d';
+
+  const head =
+    document.getElementById('ev-head');
+
+  head.className = '';
+
+  if (
+    c.dominant_label ===
+    'industrial_fire'
+  ) {
+    head.classList.add('industrial');
+
+  } else if (
+    c.dominant_label ===
+    'persistent_industrial_source'
+  ) {
+    head.classList.add('persistent');
+
+  } else {
+    head.classList.add('insufficient');
+  }
+
+
+  document.getElementById(
+    'ev-tag'
+  ).textContent =
+    `THERMAL EVENT CLUSTER · ${
+      labelNames[c.dominant_label]
+    }`.toUpperCase();
+
+
+  document.getElementById(
+    'ev-title'
+  ).textContent =
+    `${c.count} detections · ${
+      c.centroid_lat.toFixed(4)
+    }, ${
+      c.centroid_lon.toFixed(4)
+    }`;
+
+
+  const clusterPoints =
+    allData.filter(
+      d => d.cluster_id === c.cluster_id
+    );
+
+
+  const breakdown = {
+
+    industrial_fire:0,
+
+    persistent_industrial_source:0,
+
+    insufficient_evidence:0
+
+  };
+
+
+  clusterPoints.forEach(d => {
+
+    breakdown[d.final_label] =
+      (breakdown[d.final_label] || 0) + 1;
+
+  });
+
+
+  const breakdownHtml =
+    Object.entries(breakdown)
+
+    .filter(
+      ([k,v]) => v > 0
+    )
+
+    .map(
+      ([k,v]) => `
+        <div class="ev-row">
+          <span>${labelNames[k]}</span>
+
+          <span
+            class="amt"
+            style="width:auto">
+            ${v}
+          </span>
+        </div>
+      `
+    )
+    .join('');
+
+
+  const rows = [
+
+    [
+      'Detection span',
+      `${c.first_date} → ${c.last_date}`
+    ],
+
+    [
+      'Persistence',
+      c.persistence_days + ' days'
+    ],
+
+    [
+      'Maximum FRP',
+      c.max_frp + ' MW'
+    ],
+
+    [
+      'Average FRP',
+      c.avg_frp + ' MW'
+    ],
+
+    [
+      'Highest Investigation Priority',
+      c.max_priority
+    ],
+
+    [
+      'Highest Fusion Score',
+      c.max_fusion
+    ],
+
+    [
+      'Industrial context',
+      c.industrial_context
+    ],
+
+    [
+      'Nearest facility',
+      c.nearest_facility_name
+    ],
+
+    [
+      'Facility type',
+      c.nearest_facility_type
+    ],
+
+    [
+      'Distance to facility',
+      c.dist_to_industrial_km + ' km'
+    ]
+
+  ];
+
+
+  document.getElementById(
+    'ev-contributors'
+  ).innerHTML =
+
+    `<div style="
+      font-size:11.5px;
+      color:#9b94a8;
+      margin-bottom:10px;
+      line-height:1.45;
+    ">
+      This groups ${c.count}
+      individual FIRMS detections that
+      occurred within 3km and 5 days of
+      each other into one thermal event,
+      based on spatial-temporal clustering.
+    </div>`
+
+    +
+
+    `<div class="ev-section-title"
+          style="margin-top:0">
+      Cluster Summary
+    </div>`
+
+    +
+
+    breakdownHtml
+
+    +
+
+    rows.map(r => `
+      <div class="ev-row">
+        <span>${r[0]}</span>
+        <span
+          class="amt"
+          style="width:auto">
+          ${r[1]}
+        </span>
+      </div>
+    `).join('')
+
+    +
+
+    `
+      <button
+        onclick="zoomToCluster()"
+        style="
+          margin-top:14px;
+          width:100%;
+          padding:9px;
+
+          background:
+            linear-gradient(
+              135deg,
+              #35106d,
+              #5d1cad
+            );
+
+          color:#fff;
+
+          border:1px solid #7c3aed;
+
+          border-radius:8px;
+
+          font-size:12px;
+          font-weight:600;
+
+          cursor:pointer;
+        ">
+        Zoom in to view
+        ${c.count}
+        individual detections
+      </button>
+    `;
+
+
+  document.getElementById(
+    'ev-signals'
+  ).innerHTML = '';
+
+  document.getElementById(
+    'raw-signals-title'
+  ).style.display = 'none';
+
+  document.getElementById(
+    'sat-context-title'
+  ).style.display = 'none';
+
+  document.getElementById(
+    'sat-caption'
+  ).style.display = 'none';
+
+  document.getElementById(
+    'sat-map'
+  ).style.display = 'none';
+
+  document.getElementById(
+    'sat-note'
+  ).style.display = 'none';
+
+
+  if (window.satMapInstance) {
+
+    window.satMapInstance.remove();
+
+    window.satMapInstance = null;
+
+  }
+
+  document.getElementById(
+    'ev-note'
+  ).textContent = '';
+
+}
+
+
+function zoomToCluster() {
+
+  const c =
+    window.currentOpenCluster;
+
+  if (!c)
+    return;
+
+  const clusterPoints =
+    allData.filter(
+      d => d.cluster_id === c.cluster_id
+    );
+
+  if (clusterPoints.length) {
+
+    const bounds =
+      L.latLngBounds(
+        clusterPoints.map(
+          d => [
+            d.latitude,
+            d.longitude
+          ]
+        )
+      );
+
+    map.flyToBounds(
+      bounds.pad(.5),
+      {
+        duration:.6,
+        maxZoom:13
+      }
+    );
+  }
+}
+
+
+/* =========================================================
+   RESIZABLE SIDEBAR
+========================================================= */
+
+(function() {
+
+  const handle =
+    document.getElementById(
+      'resize-handle'
+    );
+
+  const feed =
+    document.getElementById('feed');
+
+  const MIN_WIDTH = 300;
+
+  const MAX_WIDTH = 700;
+
+  let dragging = false;
+
+  let startX = 0;
+
+  let startWidth = 0;
+
+
+  handle.addEventListener(
+    'mousedown',
+    e => {
+
+      dragging = true;
+
+      startX = e.clientX;
+
+      startWidth =
+        feed.getBoundingClientRect().width;
+
+      handle.classList.add(
+        'dragging'
+      );
+
+      document.body.style.userSelect =
+        'none';
+
+    }
+  );
+
+
+  window.addEventListener(
+    'mousemove',
+    e => {
+
+      if (!dragging)
+        return;
+
+      const delta =
+        startX - e.clientX;
+
+      let newWidth =
+        startWidth + delta;
+
+      newWidth =
+        Math.max(
+          MIN_WIDTH,
+          Math.min(
+            MAX_WIDTH,
+            newWidth
+          )
+        );
+
+      feed.style.width =
+        newWidth + 'px';
+
+      map.invalidateSize();
+
+      if (window.satMapInstance)
+        window.satMapInstance.invalidateSize();
+
+      updateConnector();
+
+    }
+  );
+
+
+  window.addEventListener(
+    'mouseup',
+    () => {
+
+      if (!dragging)
+        return;
+
+      dragging = false;
+
+      handle.classList.remove(
+        'dragging'
+      );
+
+      document.body.style.userSelect =
+        '';
+
+      map.invalidateSize();
+
+      if (window.satMapInstance)
+        window.satMapInstance.invalidateSize();
+
+      updateConnector();
+
+    }
+  );
+
+})();
+
+
+/* =========================================================
+   MAP CONTROLS
+========================================================= */
+
+function resetMapView() {
+
+  map.flyToBounds(
+    [
+      [6.5,66.5],
+      [36.5,92.5]
+    ],
+    {
+      duration:.6
+    }
+  );
+
+}
+
+
+function zoomToCurrentDetection() {
+
+  if (currentOpenDetection) {
+
+    map.flyTo(
+      [
+        currentOpenDetection.latitude,
+        currentOpenDetection.longitude
+      ],
+
+      12,
+
+      {
+        duration:.5
+      }
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   OPEN DETECTION PANEL
+========================================================= */
+
+function openPanel(d) {
+
+  currentOpenDetection = d;
+
+  window.currentOpenCluster = null;
+
+
+  document.getElementById(
+    'raw-signals-title'
+  ).style.display = 'block';
+
+  document.getElementById(
+    'sat-context-title'
+  ).style.display = 'block';
+
+  document.getElementById(
+    'sat-caption'
+  ).style.display = 'block';
+
+  document.getElementById(
+    'sat-map'
+  ).style.display = 'block';
+
+  document.getElementById(
+    'sat-note'
+  ).style.display = 'block';
+
+  document.getElementById(
+    'list-view'
+  ).style.display = 'none';
+
+  document.getElementById(
+    'detail-view'
+  ).style.display = 'flex';
+
+
+  const currentZoom =
+    map.getZoom();
+
+  const currentBounds =
+    map.getBounds().pad(-.2);
+
+  const markerLatLng =
+    L.latLng(
+      d.latitude,
+      d.longitude
+    );
+
+  if (
+    !currentBounds.contains(
+      markerLatLng
+    )
+  ) {
+
+    map.panTo(
+      [
+        d.latitude,
+        d.longitude
+      ],
+      {
+        duration:.5
+      }
+    );
+
+  }
+
+  console.assert(
+    map.getZoom() === currentZoom,
+    'Zoom level must not change'
+  );
+
+
+  const head =
+    document.getElementById(
+      'ev-head'
+    );
+
+  head.className = '';
+
+
+  if (
+    d.final_label ===
+    'industrial_fire'
+  ) {
+
+    head.classList.add(
+      'industrial'
+    );
+
+  }
+
+  else if (
+    d.final_label ===
+    'persistent_industrial_source'
+  ) {
+
+    head.classList.add(
+      'persistent'
+    );
+
+  }
+
+  else {
+
+    head.classList.add(
+      'insufficient'
+    );
+
+  }
+
+
+  const color =
+    colors[d.final_label];
+
+  const tier =
+    priorityTier(
+      d.risk_score
+    );
+
+
+  document.getElementById(
+    'ev-tag'
+  ).textContent =
+    `${tier.toUpperCase()} PRIORITY · ${
+      labelNames[d.final_label]
+    }`.toUpperCase();
+
+
+  document.getElementById(
+    'ev-title'
+  ).textContent =
+    `${d.latitude.toFixed(4)}, ${
+      d.longitude.toFixed(4)
+    }`;
+
+
+  document.getElementById(
+    'ev-score'
+  ).textContent =
+    `Investigation Priority ${d.risk_score.toFixed(2)}`;
+
+
+  const riskFactors = [
+
+    [
+      'Thermal abnormality (vs local baseline)',
+      d.thermal_abnormality,
+      1
+    ],
+
+    [
+      'Persistence (days observed / 5)',
+      d.persistence_norm,
+      1
+    ],
+
+    [
+      'Thermal intensity (FRP percentile)',
+      d.frp_intensity_norm,
+      1
+    ]
+
+  ];
+
+
+  document.getElementById(
+    'ev-contributors'
+  ).innerHTML = `
+
+    <div style="
+      display:flex;
+      gap:8px;
+      margin-bottom:14px;
+    ">
+
+      <div class="detail-card">
+
+        <div class="small">
+          Investigation Priority
+        </div>
+
+        <div class="big">
+          ${d.risk_score.toFixed(2)}
+
+          <span style="
+            font-size:11px;
+            color:${riskColors[tier]};
+          ">
+            ${tier.toUpperCase()}
+          </span>
+        </div>
+
+        <div class="hint">
+          Investigate first?
+        </div>
+
+      </div>
+
+
+      <div class="detail-card">
+
+        <div class="small">
+          Industrial Evidence
+        </div>
+
+        <div class="big">
+
+          ${d.industrial_evidence_score.toFixed(2)}
+
+          <span style="
+            font-size:11px;
+            color:${color};
+          ">
+            ${(d.evidence_level || 'N/A').toUpperCase()}
+          </span>
+
+        </div>
+
+        <div class="hint">
+          Industrial evidence?
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div class="ev-section-title"
+         style="margin-top:0">
+
+      Investigation Priority —
+      Why Investigate First?
+
+    </div>
+
+
+    ${riskFactors.map(c => `
+
+      <div class="ev-row">
+
+        <span>
+          ${c[0]}
+        </span>
+
+        <div class="bar-bg">
+
+          <div
+            class="bar-fill"
+            style="
+              width:${(
+                c[1] / c[2] * 100
+              ).toFixed(0)}%;
+              background:${riskColors[tier]};
+            ">
+          </div>
+
+        </div>
+
+        <span class="amt">
+          ${c[1].toFixed(2)}
+        </span>
+
+      </div>
+
+    `).join('')}
+
+
+    <div style="
+      font-size:11.5px;
+      color:#938ca1;
+      margin-top:8px;
+      line-height:1.45;
+    ">
+
+      Priority = equal-weighted average of
+      thermal abnormality, persistence, and
+      FRP percentile rank.
+
+      Spatial growth and facility-criticality
+      are not yet included.
+
+    </div>
+
+
+    <div style="
+      font-family:'JetBrains Mono';
+      font-size:11px;
+
+      background:#11101a;
+
+      border:1px solid #292238;
+
+      border-radius:6px;
+
+      padding:8px 10px;
+
+      margin-top:7px;
+
+      color:#dcd6e8;
+    ">
+
+      (${d.thermal_abnormality.toFixed(2)}
+      +
+      ${d.persistence_norm.toFixed(2)}
+      +
+      ${d.frp_intensity_norm.toFixed(2)})
+      ÷ 3 =
+
+      <b>
+        ${d.risk_score.toFixed(2)}
+      </b>
+
+    </div>
+
+
+    <div class="ev-section-title">
+
+      Classification Evidence —
+      Why This Category?
+
+    </div>
+
+
+    <div style="
+      font-size:11px;
+      color:#938ca1;
+      margin-bottom:8px;
+      line-height:1.45;
+    ">
+
+      Industrial context (≤5km) is the gate.
+      Persistence decides Industrial Fire vs.
+      Persistent Source.
+
+      Thermal Evidence (ML) does not decide
+      the category it only contributes to
+      Evidence Level.
+
+    </div>
+
+
+    ${
+      [
+        [
+          'Facility proximity',
+          d.facility_proximity_score,
+          .35
+        ],
+
+        [
+          'Thermal persistence',
+          d.persistence_score,
+          .30
+        ],
+
+        [
+          'Thermal Evidence (ML)',
+          d.thermal_intensity_score,
+          .35
+        ]
+
+      ].map(c => `
+
+        <div class="ev-row">
+
+          <span>
+            ${c[0]}
+          </span>
+
+          <div class="bar-bg">
+
+            <div
+              class="bar-fill"
+              style="
+                width:${(
+                  c[1] / c[2] * 100
+                ).toFixed(0)}%;
+                background:${color};
+              ">
+            </div>
+
+          </div>
+
+          <span class="amt">
+            +${c[1].toFixed(2)}
+          </span>
+
+        </div>
+
+      `).join('')
+    }
+
+
+    <div style="
+      font-family:'JetBrains Mono';
+      font-size:11px;
+
+      background:#11101a;
+
+      border:1px solid #292238;
+
+      border-radius:6px;
+
+      padding:8px 10px;
+
+      margin-top:6px;
+
+      color:#dcd6e8;
+    ">
+
+      (
+      ${d.facility_proximity_score.toFixed(2)}
+      +
+      ${d.thermal_intensity_score.toFixed(2)}
+      )
+      ÷ 0.70 =
+
+      <b>
+        ${d.industrial_evidence_score.toFixed(2)}
+        →
+        ${d.evidence_level || 'N/A'}
+      </b>
+
+    </div>
+
+
+    <div style="
+      font-size:10.5px;
+      color:#777183;
+      margin-top:4px;
+    ">
+
+      Evidence Level reflects how strongly
+      the evidence supports this category —
+      it is not a calibrated probability.
+
+    </div>
+
+  `;
+
+
+  const signals = [
+
+    [
+      'Industrial context',
+      d.industrial_context
+    ],
+
+    [
+      'Distance to nearest facility',
+      d.dist_to_industrial_km.toFixed(2)
+      + ' km'
+    ],
+
+    [
+      'Days recurring at this location',
+      d.recurrence_days + ' / 5'
+    ],
+
+    [
+      'Fire Radiative Power (FRP)',
+      d.frp + ' MW'
+    ],
+
+    [
+      'Detection date',
+      d.acq_date
+    ]
+
+  ];
+
+
+  document.getElementById(
+    'ev-signals'
+  ).innerHTML =
+
+    signals.map(s => `
+
+      <div class="ev-row">
+
+        <span>
+          ${s[0]}
+        </span>
+
+        <span
+          class="amt"
+          style="width:auto">
+
+          ${s[1]}
+
+        </span>
+
+      </div>
+
+    `).join('');
+
+
+  const facilityHtml =
+    d.dist_to_industrial_km < 10
+
+    ?
+
+    `
+
+      <div class="ev-row">
+
+        <span>
+          Facility
+        </span>
+
+        <span
+          class="amt"
+          style="width:auto">
+
+          ${d.nearest_facility_name}
+
+        </span>
+
+      </div>
+
+
+      <div class="ev-row">
+
+        <span>
+          Type
+        </span>
+
+        <span
+          class="amt"
+          style="width:auto">
+
+          ${d.nearest_facility_type}
+
+        </span>
+
+      </div>
+
+
+      <div class="ev-row">
+
+        <span>
+          Distance
+        </span>
+
+        <span
+          class="amt"
+          style="width:auto">
+
+          ${d.dist_to_industrial_km.toFixed(2)}
+          km
+
+        </span>
+
+      </div>
+
+
+      <div class="ev-row">
+
+        <span>
+          Source
+        </span>
+
+        <span
+          class="amt"
+          style="width:auto">
+
+          OpenStreetMap
+
+        </span>
+
+      </div>
+
+    `
+
+    :
+
+    `
+
+      <div class="ev-row">
+
+        <span>
+          No relevant facility within range
+        </span>
+
+        <span
+          class="amt"
+          style="width:auto">
+
+          —
+
+        </span>
+
+      </div>
+
+    `;
+
+
+  document.getElementById(
+    'ev-signals'
+  ).innerHTML += `
+
+    <div class="ev-section-title">
+
+      Nearest Industrial Facility
+
+    </div>
+
+    ${facilityHtml}
+
+  `;
+
+
+  document.getElementById(
+    'sat-caption'
+  ).textContent =
+    'Esri World Imagery contextual basemap';
+
+
+  if (window.satMapInstance) {
+
+    window.satMapInstance.remove();
+
+    window.satMapInstance = null;
+
+  }
+
+
+  document.getElementById(
+    'sat-map'
+  ).innerHTML = '';
+
+
+  const satMap =
+    L.map(
+      'sat-map',
+      {
+        zoomControl:false,
+        attributionControl:false,
+        dragging:true,
+        scrollWheelZoom:false
+      }
+    )
+    .setView(
+      [
+        d.latitude,
+        d.longitude
+      ],
+      13
+    );
+
+
+  window.satMapInstance =
+    satMap;
+
+
+  L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    {
+      maxZoom:18
+    }
+  ).addTo(satMap);
+
+
+  L.circleMarker(
+    [
+      d.latitude,
+      d.longitude
+    ],
+    {
+      radius:8,
+      color:'#fff',
+      weight:2,
+      fillColor:color,
+      fillOpacity:1
+    }
+  )
+  .bindTooltip(
+    '🔥 Thermal detection'
+  )
+  .addTo(satMap);
+
+
+  if (
+    d.dist_to_industrial_km < 10
+  ) {
+
+    L.circleMarker(
+      [
+        d.nearest_facility_lat,
+        d.nearest_facility_lon
+      ],
+      {
+        radius:7,
+        color:'#fff',
+        weight:2,
+        fillColor:'#19c38a',
+        fillOpacity:1
+      }
+    )
+    .bindTooltip(
+      '🏭 Nearest mapped facility'
+    )
+    .addTo(satMap);
+
+
+    L.polyline(
+      [
+        [
+          d.latitude,
+          d.longitude
+        ],
+
+        [
+          d.nearest_facility_lat,
+          d.nearest_facility_lon
+        ]
+      ],
+      {
+        color:'#fff',
+        weight:1.5,
+        dashArray:'4,4'
+      }
+    ).addTo(satMap);
+
+
+    const bounds =
+      L.latLngBounds([
+        [
+          d.latitude,
+          d.longitude
+        ],
+
+        [
+          d.nearest_facility_lat,
+          d.nearest_facility_lon
+        ]
+      ]);
+
+
+    satMap.fitBounds(
+      bounds,
+      {
+        padding:[30,30]
+      }
+    );
+
+  }
+
+
+  setTimeout(
+    () => satMap.invalidateSize(),
+    60
+  );
+
+
+  document.getElementById(
+    'sat-note'
+  ).textContent =
+
+    d.dist_to_industrial_km < 10
+
+    ?
+
+    `Spatial relationship: thermal anomaly is ${
+      d.dist_to_industrial_km.toFixed(2)
+    } km from the nearest mapped industrial
+    facility. Imagery date is set by the tile
+    provider and is not tied to the FIRMS
+    detection date shown above.`
+
+    :
+
+    `No mapped industrial facility within
+    10 km satellite context shown for
+    the detection location only. Imagery date
+    is set by the tile provider, not the FIRMS
+    detection date.`;
+
+
+  let note = '';
+
+
+  if (
+    d.final_label ===
+    'insufficient_evidence'
+  ) {
+
+    note =
+      'Classified as insufficient evidence: no known industrial facility within 5km. This does not rule out an industrial source it means current evidence does not support a confident classification.';
+
+  }
+
+  else {
+
+    note =
+      'Investigation Priority = should I look at this first? Category (Industrial Fire / Persistent Source) is decided by the rule-based layer: industrial context (≤5km) is the gate, persistence decides which category. Thermal Evidence (ML) never decides the category it only informs Evidence Level.';
+
+  }
+
+
+  document.getElementById(
+    'ev-note'
+  ).textContent = note;
+
+}
+
+
+/* =========================================================
+   CLOSE PANEL
+========================================================= */
+
+function closePanel() {
+
+  document.getElementById(
+    'detail-view'
+  ).style.display = 'none';
+
+  document.getElementById(
+    'list-view'
+  ).style.display = 'block';
+
+  document.getElementById(
+    'connector-line'
+  ).style.display = 'none';
+
+}
+
+
+/* =========================================================
+   FEED
+========================================================= */
+
+function renderFeed(filter) {
+
+  const feedList =
+    document.getElementById(
+      'feed-list'
+    );
+
+  feedList.innerHTML = '';
+
+
+  let filtered =
+    filter === 'all'
+      ? allData.slice()
+      : allData.filter(
+          d =>
+            d.final_label === filter
+        );
+
+
+  const sortKey =
+    currentSort === 'risk'
+      ? 'risk_score'
+      : 'fusion_score';
+
+
+  filtered
+    .sort(
+      (a,b) =>
+        b[sortKey] -
+        a[sortKey]
+    )
+    .slice(0,60)
+    .forEach(d => {
+
+      const item =
+        document.createElement(
+          'div'
+        );
+
+
+      item.className =
+        'feed-item ' +
+        d.final_label;
+
+
+      const tier =
+        priorityTier(
+          d.risk_score
+        );
+
+
+      const riskBadge = `
+
+        <span style="
+          font-size:10px;
+          font-weight:700;
+
+          padding:2px 7px;
+
+          border-radius:10px;
+
+          color:#fff;
+
+          background:
+            ${riskColors[tier]};
+
+          margin-right:6px;
+        ">
+
+          ${tier.toUpperCase()}
+          PRIORITY
+
+        </span>
+
+      `;
+
+
+      item.innerHTML = `
+
+        <div class="row1">
+
+          <span>
+
+            ${riskBadge}
+
+            <span class="label">
+
+              ${labelNames[
+                d.final_label
+              ]}
+
+            </span>
+
+          </span>
+
+        </div>
+
+
+        <div style="
+          display:flex;
+          gap:14px;
+          margin-top:6px;
+        ">
+
+          <span style="
+            font-family:'JetBrains Mono';
+            font-size:12px;
+          ">
+
+            <b>Priority</b>
+            ${d.risk_score.toFixed(2)}
+
+          </span>
+
+
+          <span style="
+            font-family:'JetBrains Mono';
+            font-size:12px;
+            color:#8f89a4;
+          ">
+
+            <b style="color:#8f89a4">
+              Fusion
+            </b>
+
+            ${d.fusion_score.toFixed(2)}
+
+          </span>
+
+        </div>
+
+
+        <div style="
+          font-size:10px;
+          color:#777183;
+          margin-top:2px;
+        ">
+
+          Priority = investigate first?
+          · Fusion = industrial evidence?
+
+        </div>
+
+
+        <div class="meta">
+
+          <b>
+            ${d.dist_to_industrial_km.toFixed(1)}
+            km
+          </b>
+
+          from facility · recurrence
+
+          <b>
+            ${d.recurrence_days}d
+          </b>
+
+          · FRP ${d.frp}
+          · ${d.acq_date}
+
+        </div>
+
+      `;
+
+
+      item.addEventListener(
+        'click',
+        () =>
+          selectDetection(d._i)
+      );
+
+
+      feedList.appendChild(item);
+
+    });
+
+}
+
+
+/* =========================================================
+   FILTER BUTTONS
+========================================================= */
+
+document
+  .querySelectorAll(
+    '.filter-btn:not(.sort-btn)'
+  )
+  .forEach(btn => {
+
+    btn.addEventListener(
+      'click',
+      () => {
+
+        document
+          .querySelectorAll(
+            '.filter-btn:not(.sort-btn)'
+          )
+          .forEach(
+            b =>
+              b.classList.remove(
+                'active'
+              )
+          );
+
+
+        btn.classList.add(
+          'active'
+        );
+
+
+        renderFeed(
+          btn.dataset.f
+        );
+
+      }
+    );
+
+  });
+
+
+/* =========================================================
+   SORT BUTTONS
+========================================================= */
+
+document
+  .querySelectorAll(
+    '.sort-btn'
+  )
+  .forEach(btn => {
+
+    btn.addEventListener(
+      'click',
+      () => {
+
+        document
+          .querySelectorAll(
+            '.sort-btn'
+          )
+          .forEach(
+            b =>
+              b.classList.remove(
+                'active'
+              )
+          );
+
+
+        btn.classList.add(
+          'active'
+        );
+
+
+        currentSort =
+          btn.dataset.s;
+
+
+        document.getElementById(
+          'feed-sub'
+        ).textContent =
+
+          currentSort === 'risk'
+
+          ?
+
+          'Ranked by investigation priority · click any event for evidence'
+
+          :
+
+          'Ranked by fusion score · click any event for evidence';
+
+
+        const activeFilter =
+          document.querySelector(
+            '.filter-btn.active:not(.sort-btn)'
+          ).dataset.f;
+
+
+        renderFeed(
+          activeFilter
+        );
+
+      }
+    );
+
+  });
+
+
+/* =========================================================
+   MARKER CLUSTER
+========================================================= */
+
+window.allClusters = [];
+
+const clusterLabelColors = {
+
+  industrial_fire:
+    '#ff465c',
+
+  persistent_industrial_source:
+    '#ff9d38',
+
+  insufficient_evidence:
+    '#89869d'
+
+};
+
+
+window.markerClusterGroup =
+  L.markerClusterGroup({
+
+    spiderfyOnMaxZoom:false,
+
+    showCoverageOnHover:false,
+
+    zoomToBoundsOnClick:false,
+
+    animate:true,
+
+    maxClusterRadius:
+      function(zoom) {
+
+        if (zoom <= 5)
+          return 55;
+
+        if (zoom <= 7)
+          return 45;
+
+        if (zoom <= 9)
+          return 35;
+
+        return 25;
+
+      },
+
+    disableClusteringAtZoom:8,
+
+
+    iconCreateFunction:
+      function(cluster) {
+
+        const children =
+          cluster.getAllChildMarkers();
+
+
+        const counts = {
+
+          industrial_fire:0,
+
+          persistent_industrial_source:0,
+
+          insufficient_evidence:0
+
+        };
+
+
+        children.forEach(
+          m => {
+
+            counts[
+              m.detectionLabel
+            ] =
+              (
+                counts[
+                  m.detectionLabel
+                ] || 0
+              ) + 1;
+
+          }
+        );
+
+
+        let dominant =
+          'insufficient_evidence';
+
+        let best = -1;
+
+
+        Object.keys(counts)
+          .forEach(k => {
+
+            if (
+              counts[k] > best
+            ) {
+
+              best =
+                counts[k];
+
+              dominant = k;
+
+            }
+
+          });
+
+
+        const color =
+          colors[dominant];
+
+
+        const count =
+          cluster.getChildCount();
+
+
+        const size =
+          count >= 100
+            ? 34
+            : count >= 25
+              ? 30
+              : count >= 5
+                ? 26
+                : 22;
+
+
+        const fontSize =
+          count >= 100
+            ? '10px'
+            : count >= 25
+              ? '11px'
+              : '11.5px';
+
+
+        return L.divIcon({
+
+          className:'',
+
+          html:`
+
+            <div style="
+              width:${size}px;
+              height:${size}px;
+
+              border-radius:50%;
+
+              background:${color};
+
+              border:2px solid #fff;
+
+              box-shadow:
+                0 0 12px
+                ${color}66,
+                0 2px 6px
+                rgba(0,0,0,.5);
+
+              display:flex;
+
+              align-items:center;
+              justify-content:center;
+
+              color:#fff;
+
+              font-family:
+                'JetBrains Mono',
+                monospace;
+
+              font-weight:700;
+
+              font-size:${fontSize};
+            ">
+
+              ${count}
+
+            </div>
+
+          `,
+
+          iconSize:[
+            size,
+            size
+          ],
+
+          iconAnchor:[
+            size/2,
+            size/2
+          ]
+
+        });
+
+      }
+
+  })
+  .addTo(map);
+
+
+/* =========================================================
+   CLUSTER CLICK
+========================================================= */
+
+window.markerClusterGroup.on(
+  'clusterclick',
+  function(e) {
+
+    const bounds =
+      e.layer.getBounds();
+
+    map.flyToBounds(
+      bounds,
+      {
+        padding:[40,40],
+        duration:.6,
+        maxZoom:16
+      }
+    );
+
+  }
+);
+
+
+/* =========================================================
+   INDIA FILTER
+========================================================= */
+
+const INDIA_BOUNDS = {
+
+  minLat:6.5,
+
+  maxLat:37.5,
+
+  minLng:68,
+
+  maxLng:97.5
+
+};
+
+
+const INDIA_BOUNDARY_URL =
+  'https://raw.githubusercontent.com/datameet/maps/master/Country/india-osm.geojson';
+
+
+let indiaGeometry = null;
+
+
+async function loadIndiaBoundary() {
+
+  const resp =
+    await fetch(
+      INDIA_BOUNDARY_URL
+    );
+
+  const geojson =
+    await resp.json();
+
+  indiaGeometry =
+    geojson.features[0];
+
+  return indiaGeometry;
+
+}
+
+
+function filterToIndia(
+  detections
+) {
+
+  const bboxFiltered =
+    detections.filter(d => {
+
+      const lat =
+        Number(d.latitude);
+
+      const lng =
+        Number(d.longitude);
+
+
+      return (
+
+        lat >=
+          INDIA_BOUNDS.minLat &&
+
+        lat <=
+          INDIA_BOUNDS.maxLat &&
+
+        lng >=
+          INDIA_BOUNDS.minLng &&
+
+        lng <=
+          INDIA_BOUNDS.maxLng
+
+      );
+
+    });
+
+
+  if (!indiaGeometry) {
+
+    console.warn(
+      'India boundary unavailable — using bbox.'
+    );
+
+    return bboxFiltered;
+
+  }
+
+
+  return bboxFiltered.filter(
+    d => {
+
+      const pt =
+        turf.point([
+          Number(d.longitude),
+          Number(d.latitude)
+        ]);
+
+      return turf.booleanPointInPolygon(
+        pt,
+        indiaGeometry
+      );
+
+    }
+  );
+
+}
+
+
+/* =========================================================
+   LOAD DATA
+========================================================= */
+
+Promise.all([
+
+  fetch('/api/detections')
+    .then(r => r.json()),
+
+  fetch('/api/clusters')
+    .then(r => r.json()),
+
+  loadIndiaBoundary()
+    .catch(err => {
+
+      console.error(
+        'Failed to load India boundary:',
+        err
+      );
+
+      return null;
+
+    })
+
+])
+.then(
+  ([data,clusters]) => {
+
+    const indiaDetections =
+      filterToIndia(data);
+
+
+    allData =
+      indiaDetections.map(
+        (d,i) => ({
+          ...d,
+          _i:i
+        })
+      );
+
+
+    console.log(
+      `India filter:
+      ${indiaDetections.length}
+      of
+      ${data.length}
+      detections kept`
+    );
+
+
+    window.dataById = {};
+
+
+    allData.forEach(
+      d => {
+
+        window.dataById[
+          d._i
+        ] = d;
+
+      }
+    );
+
+
+    window.markerRefs = [];
+
+    window.selectedMarkerIdx =
+      null;
+
+    window.allClusters =
+      clusters;
+
+
+    const clusterMarkers = [];
+
+
+    allData.forEach(d => {
+
+      const isHigh =
+        d.final_label !==
+        'insufficient_evidence';
+
+
+      const baseRadius =
+        d.final_label ===
+        'industrial_fire'
+
+        ? 7
+
+        : (
+            isHigh
+              ? 5
+              : 3
+          );
+
+
+      /*
+        DOTS REMAIN DOTS.
+      */
+
+      const marker =
+        L.circleMarker(
+          [
+            d.latitude,
+            d.longitude
+          ],
+          {
+
+            radius:
+              baseRadius,
+
+            color:'#fff',
+
+            weight:1,
+
+            fillColor:
+              colors[d.final_label],
+
+            fillOpacity:.9
+
+          }
+        );
+
+
+      marker._baseRadius =
+        baseRadius;
+
+
+      marker.detectionLabel =
+        d.final_label;
+
+
+      window.markerRefs[
+        d._i
+      ] = marker;
+
+
+      marker.on(
+        'click',
+        () =>
+          selectDetection(d._i)
+      );
+
+
+      clusterMarkers.push(
+        marker
+      );
+
+    });
+
+
+    window.markerClusterGroup
+      .addLayers(
+        clusterMarkers
+      );
+
+
+    renderFeed('all');
+
+  }
+);
+
+
+/* =========================================================
+   SELECT DOT
+========================================================= */
+
+function selectDetection(i) {
+
+  /*
+    Reset previous dot.
+  */
+
+  if (
+    window.selectedMarkerIdx !== null &&
+    window.markerRefs[
+      window.selectedMarkerIdx
+    ]
+  ) {
+
+    const prev =
+      window.markerRefs[
+        window.selectedMarkerIdx
+      ];
+
+
+    if (map.hasLayer(prev)) {
+
+      prev.setStyle({
+
+        weight:1,
+
+        radius:
+          prev._baseRadius,
+
+        color:'#fff'
+
+      });
+
+    }
+
+  }
+
+
+  if (window.glowMarker) {
+
+    map.removeLayer(
+      window.glowMarker
+    );
+
+    window.glowMarker =
+      null;
+
+  }
+
+
+  const marker =
+    window.markerRefs[i];
+
+
+  const d =
+    window.dataById[i];
+
+
+  /*
+    Only show glow when the dot
+    is actually visible.
+  */
+
+  if (
+    marker &&
+    map.hasLayer(marker)
+  ) {
+
+    const fillColor =
+      colors[d.final_label];
+
+
+    window.glowMarker =
+      L.circleMarker(
+        [
+          d.latitude,
+          d.longitude
+        ],
+        {
+
+          radius:
+            marker._baseRadius + 9,
+
+          color:
+            fillColor,
+
+          weight:0,
+
+          fillColor:
+            fillColor,
+
+          fillOpacity:.22,
+
+          interactive:false
+
+        }
+      ).addTo(map);
+
+
+    window.glowMarker.bringToBack();
+
+
+    marker.setStyle({
+
+      weight:3,
+
+      radius:
+        marker._baseRadius + 3,
+
+      color:'#fff'
+
+    });
+
+
+    marker.bringToFront();
+
+  }
+
+
+  window.selectedMarkerIdx =
+    i;
+
+
+  openPanel(d);
+
+
+  setTimeout(
+    updateConnector,
+    20
+  );
+
+}
+
+</script>
+
+</body>
+</html>
