@@ -27,6 +27,10 @@ Manually triaging thousands of raw points doesn't scale. AntriX adds **industria
 ```text
 NASA FIRMS (VIIRS/MODIS)        OSM Overpass (industrial facilities)
         │                                   │
+        ▼                                   │
+  Cleaning: confidence filter,              │
+  India-only, cross-sensor dedup            │
+        │                                   │
         └───────────────┬───────────────────┘
                          ▼
               Distance + Recurrence
@@ -115,6 +119,18 @@ Classification (*what is it?*) and priority (*what do I look at first?*) are sep
 
 Flask + Leaflet (`antrix_app/`), with `leaflet.markercluster` for detection clustering and `turf.js` for spatial helpers. Shows location, facility proximity, thermal stats, recurrence, classification, evidence level and risk — one map instead of raw tables.
 
+**Basemaps** — Esri Dark Gray Canvas (default) or Esri World Imagery.
+
+**Overlays** — *Thermal Density*, an FRP-weighted heatmap answering "where is thermal activity concentrated" independent of how individual points cluster; and *NASA VIIRS Imagery*, true-colour GIBS tiles for the snapshot's most recent day.
+
+**Observation Window** — the snapshot spans several acquisition days, all flattened onto one map by default. The dual slider narrows it to a contiguous run of dates. Map dots, the density layer, the feed and the four header counts all read from that same window, so they cannot disagree.
+
+**Marker size** encodes FRP (`sqrt`-scaled and capped), colour encodes classification.
+
+### Offline resilience
+
+Leaflet, markercluster, turf, leaflet.heat and the India outline are all served from `antrix_app/static/`. Web fonts load non-blocking. With the network fully cut the dashboard still renders every detection, cluster, heatmap and panel in well under a second — only the basemap tiles are missing. This matters because an earlier build fetched a 6.6 MB boundary from `raw.githubusercontent.com` inside the same `Promise.all` as the detections, so a slow network left the map and feed completely blank.
+
 ---
 
 ## 🛠️ Tech Stack
@@ -137,6 +153,8 @@ AntriX/
 ├── run_pipeline.py           # runs the whole processing chain + starts the web app
 ├── fetch_data*.py            # NASA FIRMS ingestion (v1-v3)
 ├── fetch_osm*.py              # OSM Overpass ingestion (v1-v3)
+├── clean_detections.py       # confidence filter, India-only, cross-sensor dedup
+├── build_india_boundary.py   # one-time: state file -> served country outline
 ├── compute_distance.py       # fire -> nearest industrial facility distance
 ├── compute_recurrence.py     # per-grid-cell recurrence over time
 ├── compute_clusters.py       # spatio-temporal clustering
@@ -152,6 +170,10 @@ AntriX/
 └── antrix_app/
     ├── app.py                 # Flask API serving detections/clusters/stats
     ├── firms_final.csv, clusters.csv
+    ├── data_snapshot.json     # which data snapshot this instance serves
+    ├── static/
+    │   ├── india_boundary.json    # locally served country outline
+    │   └── vendor/                # leaflet, markercluster, turf, heat
     └── templates/
         ├── index.html         # Leaflet dashboard
         └── ANTRIX_Visual_Intelligence_Report.ipynb
@@ -179,7 +201,13 @@ Run every command below with this venv activated.
 
 ### 2. Get a NASA FIRMS API key
 
-`fetch_data_v2.py` / `fetch_data_v3.py` use a FIRMS `MAP_KEY` hardcoded in the script. Get a free key at https://firms.modaps.eosdis.nasa.gov/api/ and drop it into the script before running. (Don't commit your own key to a public repo — see **Security** below.)
+Get a free key at https://firms.modaps.eosdis.nasa.gov/api/ and export it:
+
+```bash
+export FIRMS_MAP_KEY=your_key_here
+```
+
+`fetch_data_v3.py` reads `FIRMS_MAP_KEY` and falls back to the team's committed key so a fresh clone still runs. That fallback is in git history — see **Security** below.
 
 ### 3. Fetch raw data
 
@@ -187,6 +215,16 @@ Run every command below with this venv activated.
 python fetch_data_v3.py    # NASA FIRMS fire detections -> firms_raw.csv
 python fetch_osm_v3.py     # OSM industrial facilities  -> osm_industrial.json
 ```
+
+One-time setup (only needed again if `india_states.geojson` changes):
+
+```bash
+python build_india_boundary.py   # -> antrix_app/static/india_boundary.json
+```
+
+This dissolves the 21 MB state file into a ~379 KB country outline. The
+pipeline uses it to drop detections outside India, and the dashboard
+serves it locally instead of downloading a boundary at page load.
 
 ### 4. Run the pipeline + web app in one command
 
@@ -202,6 +240,7 @@ Runs distance → recurrence → labeling → ML training → fusion scoring →
 <summary>Pipeline steps in order (see <code>run_pipeline.py</code>)</summary>
 
 ```bash
+python clean_detections.py
 python compute_distance.py
 python compute_recurrence.py
 python label_data.py
@@ -255,6 +294,28 @@ python app.py
 
 ---
 
+## 🔄 Data Snapshots (read before comparing two instances)
+
+NASA FIRMS is a **live feed**. Two people who run `fetch_data_v3.py` at
+different times get different data, so their dashboards will legitimately
+show different detection counts. This is not a bug, and it is the usual
+reason a local instance and the deployed one disagree.
+
+`run_pipeline.py` therefore writes `data_snapshot.json` recording a
+snapshot id, the generation time, and the detection date range. The
+dashboard prints it under the title:
+
+```text
+snapshot 8ce6bc47 · 2026-08-25 → 2026-08-29
+```
+
+**If two instances show different numbers, compare that line first.**
+Same id means the same data and a real bug; different ids just mean
+different fetches.
+
+Before a demo, freeze the data: one person runs the pipeline, commits
+`antrix_app/`, and pushes. Everyone else pulls rather than re-fetching.
+
 ## ⚠️ Data & Operational Considerations
 
 AntriX is a **decision-support / investigation-prioritization** tool, not a verdict machine. A classification isn't proof of an incident on its own — satellite readings are affected by cloud cover, sensor limitations, revisit frequency, spatial resolution and geolocation uncertainty. Treat output as a ranked queue for human verification, not an automated finding.
@@ -263,7 +324,8 @@ AntriX is a **decision-support / investigation-prioritization** tool, not a verd
 
 ## 🔐 Security
 
-- `fetch_data_v2.py` / `fetch_data_v3.py` currently hardcode the FIRMS `MAP_KEY` in source. Before pushing to a public repo, move it to an environment variable (`.env`, git-ignored) and read it with `os.environ`.
+- `fetch_data_v3.py` reads `FIRMS_MAP_KEY` from the environment but keeps a hardcoded fallback key so the pipeline still runs on a fresh clone. **That key is already in git history.** Before the repo goes public: rotate it at https://firms.modaps.eosdis.nasa.gov/api/, delete the `FALLBACK_MAP_KEY` line, and require the env var.
+- `fetch_data_v2.py` still hardcodes the old key — same treatment, or delete the file since `run_pipeline.py` only calls v3.
 - Don't commit API keys, tokens or credentials.
 - Add `venv/`, `cache/`, `__pycache__/`, `.env` to `.gitignore` (see below).
 
