@@ -2,19 +2,29 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title> SATAT - Industrial Thermal Anomaly Detection</title>
+<title>AntriX — Industrial Thermal Anomaly Detection</title>
 
 <link rel="stylesheet"
-href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+href="/static/vendor/leaflet.css"/>
 
 <link rel="stylesheet"
-href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+href="/static/vendor/MarkerCluster.css"/>
 
 <link rel="stylesheet"
-href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+href="/static/vendor/MarkerCluster.Default.css"/>
+
+<!--
+  Every other asset is now served locally, so the dashboard renders
+  with no third-party request in the critical path. Web fonts are
+  the one remaining external fetch and they are purely cosmetic, so
+  the stylesheet loads non-blocking: if fonts.googleapis.com is slow
+  or blocked on venue wifi the page still paints immediately on the
+  system-font fallbacks.
+-->
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap"
-rel="stylesheet">
+rel="stylesheet" media="print" onload="this.media='all'">
 
 <style>
 
@@ -63,7 +73,7 @@ body {
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   overflow: hidden;
 }
 
@@ -120,11 +130,9 @@ body {
     0 0 18px rgba(139,61,255,.18);
 }
 
-#mark img {
+#mark svg {
   width: 100%;
   height: 100%;
-
-  object-fit: contain;
 
   display: block;
 }
@@ -154,12 +162,24 @@ body {
   text-align: right;
 }
 
+.stat {
+  transition: background .15s ease;
+}
+
+.stat:hover {
+  background: rgba(255,255,255,.025);
+}
+
 .stat .val {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   font-weight: 700;
   font-size: 21px;
   color: #fff;
   line-height: 1;
+
+  /* Counts change as the window is scrubbed; fixed-width
+     digits stop the header jittering while dragging. */
+  font-variant-numeric: tabular-nums;
 }
 
 .stat .lbl {
@@ -182,6 +202,9 @@ body {
   height: 8px;
   border-radius: 50%;
   display: inline-block;
+
+  /* Ties the legend swatch to the glow used on the map dots. */
+  box-shadow: 0 0 7px currentColor;
 }
 
 /* =========================================================
@@ -284,7 +307,7 @@ body {
 }
 
 .filter-btn {
-  font-family: 'Inter';
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
   font-size: 11.5px;
   font-weight: 600;
@@ -427,7 +450,7 @@ body {
 }
 
 .feed-item .conf {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 13px;
   font-weight: 700;
 }
@@ -493,6 +516,275 @@ body {
   gap: 9px;
 
   color: #e8e4ef;
+}
+
+/* =========================================================
+   LAYER CONTROLS
+========================================================= */
+
+#layer-controls {
+  position: absolute;
+
+  top: 24px;
+  left: 24px;
+
+  z-index: 500;
+
+  background:
+    rgba(8,7,13,.94);
+
+  border: 1px solid #302741;
+
+  padding: 14px 16px;
+
+  border-radius: 12px;
+
+  box-shadow:
+    0 12px 35px rgba(0,0,0,.45);
+
+  backdrop-filter: blur(10px);
+
+  width: 178px;
+}
+
+#layer-controls .title {
+  font-weight: 700;
+  font-size: 11px;
+
+  margin-bottom: 9px;
+
+  color: #a09aaf;
+
+  text-transform: uppercase;
+  letter-spacing: .6px;
+}
+
+#layer-controls .title.spaced {
+  margin-top: 15px;
+}
+
+#layer-controls .btn-row {
+  display: flex;
+  gap: 6px;
+}
+
+#layer-controls .stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#layer-controls button {
+  flex: 1;
+
+  background: #16121f;
+
+  border: 1px solid #302741;
+
+  color: #a09aaf;
+
+  padding: 7px 9px;
+
+  border-radius: 7px;
+
+  font-size: 11.5px;
+  font-family: inherit;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: all .15s;
+}
+
+#layer-controls button:hover {
+  border-color: #4a3d63;
+  color: #e8e4ef;
+}
+
+#layer-controls button.active {
+  background: #6d3bd4;
+  border-color: #8355e8;
+  color: #fff;
+}
+
+/* =========================================================
+   TIME CONTROLS
+
+   The snapshot spans several observation days. Without this
+   every day is flattened onto one map, so a fire burning on
+   one date looks identical to a site that lit up all week.
+   Scrubbing the window is also what makes "persistent" and
+   "recurrence" legible during a walkthrough.
+========================================================= */
+
+#time-controls {
+  position: absolute;
+
+  /*
+    Stacked under #layer-controls in the left rail rather than
+    bottom-left, which is where #legend sits.
+  */
+  top: 246px;
+  left: 24px;
+
+  z-index: 500;
+
+  background:
+    rgba(8,7,13,.94);
+
+  border: 1px solid #302741;
+
+  padding: 13px 16px 15px;
+
+  border-radius: 12px;
+
+  box-shadow:
+    0 12px 35px rgba(0,0,0,.45);
+
+  backdrop-filter: blur(10px);
+
+  width: 224px;
+}
+
+#time-controls .title {
+  font-weight: 700;
+  font-size: 11px;
+
+  color: #a09aaf;
+
+  text-transform: uppercase;
+  letter-spacing: .6px;
+
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+
+  gap: 10px;
+
+  margin-bottom: 9px;
+}
+
+#tc-reset {
+  background: none;
+  border: none;
+
+  color: #6f6980;
+
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+
+  letter-spacing: .4px;
+
+  cursor: pointer;
+
+  padding: 0;
+}
+
+#tc-reset:hover {
+  color: #c9a8ff;
+}
+
+#tc-range {
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  font-size: 11.5px;
+  color: #e8e4ef;
+
+  white-space: nowrap;
+}
+
+#tc-count {
+  font-size: 10.5px;
+  color: #8e879f;
+
+  margin-top: 2px;
+  margin-bottom: 10px;
+}
+
+/* Two overlaid tracks: one handle for each end of the window. */
+#tc-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+#time-controls input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+
+  width: 100%;
+  height: 4px;
+
+  background: #2a2237;
+
+  border-radius: 3px;
+
+  outline: none;
+
+  cursor: pointer;
+}
+
+#time-controls input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+
+  width: 14px;
+  height: 14px;
+
+  border-radius: 50%;
+
+  background: #8b5cf6;
+
+  border: 2px solid #0d0a14;
+
+  box-shadow: 0 0 0 1px #8b5cf6;
+
+  cursor: pointer;
+}
+
+#time-controls input[type=range]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+
+  border-radius: 50%;
+
+  background: #8b5cf6;
+
+  border: 2px solid #0d0a14;
+
+  cursor: pointer;
+}
+
+#tc-ticks {
+  display: flex;
+  justify-content: space-between;
+
+  font-size: 9.5px;
+  color: #5f5972;
+
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  margin-top: 7px;
+}
+
+/* =========================================================
+   SNAPSHOT BADGE
+========================================================= */
+
+#snapshot-badge {
+  font-size: 10px;
+
+  color: #6f6980;
+
+  margin-top: 3px;
+
+  letter-spacing: .3px;
+
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 /* =========================================================
@@ -919,17 +1211,59 @@ body {
 
   <div id="brand">
 
- <!-- LOGO IMAGE: served from Flask's static folder -->
-<div id="mark">
-  <img src="https://static.vecteezy.com/system/resources/previews/043/212/465/non_2x/a-logo-representing-industry-with-a-factory-in-the-background-a-modern-and-minimalist-symbol-representing-industrial-services-free-vector.jpg" alt="ANTRIX logo">
+ <!--
+   Inline SVG mark. Previously a stock JPG hotlinked from
+   vecteezy.com -- the same class of external render-path
+   dependency that was blanking the map, plus a licensing
+   question on a stock image. Inline means zero requests and
+   nothing to fail during a live demo.
+ -->
+<div id="mark" role="img" aria-label="AntriX logo">
+  <svg viewBox="0 0 40 40" fill="none"
+       xmlns="http://www.w3.org/2000/svg">
+
+    <defs>
+      <linearGradient id="mk-g" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0"   stop-color="#8b5cf6"/>
+        <stop offset="0.55" stop-color="#c0398f"/>
+        <stop offset="1"   stop-color="#ff6a3d"/>
+      </linearGradient>
+    </defs>
+
+    <!-- sensor footprint -->
+    <rect x="1.5" y="1.5" width="37" height="37" rx="10"
+          fill="#120e1c" stroke="url(#mk-g)" stroke-width="1.6"/>
+
+    <!-- industrial skyline -->
+    <path d="M10 28.5 V19.5 l5.4 3.4 V19.5 l5.4 3.4 V16 h4.1 v12.5 Z"
+          fill="url(#mk-g)" fill-opacity=".92"/>
+
+    <!-- stack plume / thermal signature -->
+    <path d="M27.8 15.4 c1.9 1.5 2.8 3.2 2.6 5.1 -.2 1.7-1.3 3-2.9 3.6
+             .7-1.4 .6-2.7-.4-3.9 -.2 1.3-.8 2.2-1.9 2.8 .5-2.7 .2-5-2.1-7.6
+             1.3 .1 2.3 .5 3 1.3 .3-1.2 .1-2.3-.6-3.4 1 .5 1.8 1.2 2.3 2.1Z"
+          fill="#ffb347"/>
+
+    <!-- orbital pass -->
+    <path d="M4.5 12.5 C13 6.5 27 6.5 35.5 12.5"
+          stroke="url(#mk-g)" stroke-width="1.5"
+          stroke-linecap="round" opacity=".75"/>
+  </svg>
 </div>
 
     <div>
-      <div id="logo">SATAT</div>
+      <div id="logo">AntriX</div>
 
       <div id="tagline">
         Industrial Thermal Anomaly Detection
       </div>
+
+      <!--
+        Which data snapshot this instance is serving. FIRMS is a live
+        feed, so two machines that fetched at different times will show
+        different counts; this makes that visible instead of silent.
+      -->
+      <div id="snapshot-badge">-</div>
     </div>
 
   </div>
@@ -940,7 +1274,7 @@ body {
       <div class="val" id="s-industrial">-</div>
 
       <div class="lbl">
-        <span class="dot" style="background:#ff465c"></span>
+        <span class="dot" style="background:#ff465c;color:#ff465c"></span>
         Industrial
       </div>
     </div>
@@ -949,7 +1283,7 @@ body {
       <div class="val" id="s-possible">-</div>
 
       <div class="lbl">
-        <span class="dot" style="background:#ff9d38"></span>
+        <span class="dot" style="background:#ff9d38;color:#ff9d38"></span>
         Persistent
       </div>
     </div>
@@ -958,7 +1292,7 @@ body {
       <div class="val" id="s-other">-</div>
 
       <div class="lbl">
-        <span class="dot" style="background:#89869d"></span>
+        <span class="dot" style="background:#89869d;color:#89869d"></span>
         Insufficient Evidence
       </div>
     </div>
@@ -983,6 +1317,86 @@ body {
 
   <div id="map">
 
+    <div id="layer-controls">
+
+      <div class="title">
+        Basemap
+      </div>
+
+      <div class="btn-row">
+
+        <button data-basemap="dark"
+                class="active"
+                onclick="setBasemap('dark')">
+          Dark
+        </button>
+
+        <button data-basemap="satellite"
+                onclick="setBasemap('satellite')">
+          Satellite
+        </button>
+
+      </div>
+
+      <div class="title spaced">
+        Overlays
+      </div>
+
+      <div class="stack">
+
+        <button data-overlay="heat"
+                onclick="toggleOverlay(
+                  'heat',
+                  !this.classList.contains('active')
+                )">
+          Thermal Density
+        </button>
+
+        <button data-overlay="gibs"
+                onclick="toggleOverlay(
+                  'gibs',
+                  !this.classList.contains('active')
+                )">
+          NASA VIIRS Imagery
+        </button>
+
+      </div>
+
+    </div>
+
+
+    <!--
+      Observation-day window. Populated from the data once it
+      loads; stays hidden if the snapshot only covers one day,
+      since a range control over a single value is noise.
+    -->
+    <div id="time-controls" style="display:none;">
+
+      <div class="title">
+        <span>Observation Window</span>
+
+        <button id="tc-reset"
+                onclick="resetDateWindow()">
+          RESET
+        </button>
+      </div>
+
+      <div id="tc-range">-</div>
+      <div id="tc-count">-</div>
+
+      <div id="tc-sliders">
+        <input type="range" id="tc-start" min="0" max="0" value="0">
+        <input type="range" id="tc-end"   min="0" max="0" value="0">
+      </div>
+
+      <div id="tc-ticks">
+        <span id="tc-first">-</span>
+        <span id="tc-last">-</span>
+      </div>
+
+    </div>
+
+
     <div id="legend">
 
       <div class="title">
@@ -990,17 +1404,17 @@ body {
       </div>
 
       <div class="row">
-        <span class="dot" style="background:#ff465c"></span>
+        <span class="dot" style="background:#ff465c;color:#ff465c"></span>
         Industrial Fire
       </div>
 
       <div class="row">
-        <span class="dot" style="background:#ff9d38"></span>
+        <span class="dot" style="background:#ff9d38;color:#ff9d38"></span>
         Persistent Industrial Source
       </div>
 
       <div class="row">
-        <span class="dot" style="background:#89869d"></span>
+        <span class="dot" style="background:#89869d;color:#89869d"></span>
         Insufficient evidence
       </div>
 
@@ -1207,11 +1621,14 @@ body {
 </div>
 
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/static/vendor/leaflet.js"></script>
 
-<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="/static/vendor/leaflet.markercluster.js"></script>
 
-<script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+<script src="/static/vendor/turf.min.js"></script>
+
+<!-- thermal density overlay -->
+<script src="/static/vendor/leaflet-heat.js"></script>
 
 
 <script>
@@ -1335,7 +1752,7 @@ L.control.zoom({
   successfully for the per-detection satellite thumbnail below.
 */
 
-L.tileLayer(
+const darkBasemap = L.tileLayer(
   'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
   {
     attribution: '© Esri, HERE, Garmin, © OpenStreetMap contributors',
@@ -1343,6 +1760,431 @@ L.tileLayer(
     maxNativeZoom: 16
   }
 ).addTo(map);
+
+
+/*
+  Esri World Imagery: true satellite view, so a detection can be
+  checked against what is physically on the ground (plant, flare
+  stack, field). Same source as the per-detection thumbnail.
+*/
+const satelliteBasemap = L.tileLayer(
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  {
+    attribution: '© Esri, Maxar, Earthstar Geographics',
+    maxZoom: 20,
+    maxNativeZoom: 18
+  }
+);
+
+
+/*
+  NASA GIBS VIIRS corrected reflectance: the actual satellite view of
+  India for the most recent detection date, same imagery family the
+  FIRMS detections are derived from. No API key required.
+*/
+function gibsUrl(date) {
+
+  return 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/' +
+    'VIIRS_NOAA20_CorrectedReflectance_TrueColor/default/' +
+    date +
+    '/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg';
+
+}
+
+
+/*
+  Placeholder date; replaced with the snapshot's last detection day
+  once /api/stats responds, so the imagery always matches the data
+  being shown rather than drifting as the snapshot is refreshed.
+*/
+const gibsOverlay = L.tileLayer(
+  gibsUrl('2026-08-28'),
+  {
+    attribution: 'NASA EOSDIS GIBS',
+    maxZoom: 20,
+    maxNativeZoom: 8,
+    opacity: 0.75
+  }
+);
+
+
+/* =========================================================
+   THERMAL DENSITY LAYER
+   Where is thermal activity concentrated, independent of
+   how the individual points happen to cluster.
+========================================================= */
+
+let heatLayer = null;
+
+function buildHeatLayer(rows) {
+
+  const points =
+    rows.map(d => {
+
+      /*
+        Weight by FRP so a strong fire outweighs several weak
+        ones. Capped so a single extreme value cannot wash out
+        the rest of the map.
+      */
+      const weight =
+        Math.min(
+          (Number(d.frp) || 0) / 50,
+          1
+        );
+
+      return [
+        d.latitude,
+        d.longitude,
+        Math.max(weight, 0.15)
+      ];
+
+    });
+
+
+  heatLayer =
+    L.heatLayer(points, {
+
+      radius: 22,
+
+      blur: 18,
+
+      maxZoom: 9,
+
+      minOpacity: 0.28,
+
+      gradient: {
+        0.2: '#3b1d5e',
+        0.4: '#a4308a',
+        0.6: '#ff465c',
+        0.8: '#ff9d38',
+        1.0: '#ffe98a'
+      }
+
+    });
+
+}
+
+
+/*
+  Rebuild the density layer for a new row set, keeping it on the
+  map only if it was already showing. Without the visibility
+  check, scrubbing the date window would silently switch the
+  overlay on while its button still read "off".
+*/
+function rebuildHeat(rows) {
+
+  const wasVisible =
+    heatLayer && map.hasLayer(heatLayer);
+
+
+  if (wasVisible)
+    map.removeLayer(heatLayer);
+
+
+  buildHeatLayer(rows);
+
+
+  if (wasVisible)
+    heatLayer.addTo(map);
+
+}
+
+
+/* =========================================================
+   OBSERVATION WINDOW
+
+   allData holds every day in the snapshot at once. These
+   helpers narrow it to a contiguous run of acquisition dates
+   that the map, the density layer and the feed all read from,
+   so the three can never show different days.
+========================================================= */
+
+let dateList     = [];
+let dateStartIdx = 0;
+let dateEndIdx   = 0;
+
+
+function visibleData() {
+
+  if (!dateList.length)
+    return allData.slice();
+
+
+  const from = dateList[dateStartIdx];
+  const to   = dateList[dateEndIdx];
+
+
+  /* ISO dates compare correctly as strings. */
+  return allData.filter(
+    d =>
+      d.acq_date >= from &&
+      d.acq_date <= to
+  );
+
+}
+
+
+function initDateWindow() {
+
+  dateList =
+    [...new Set(
+      allData
+        .map(d => d.acq_date)
+        .filter(Boolean)
+    )].sort();
+
+
+  /* A range control over one value is just clutter. */
+  if (dateList.length < 2)
+    return;
+
+
+  dateStartIdx = 0;
+  dateEndIdx   = dateList.length - 1;
+
+
+  const start = document.getElementById('tc-start');
+  const end   = document.getElementById('tc-end');
+
+
+  [start, end].forEach(el => {
+    el.min = 0;
+    el.max = dateList.length - 1;
+  });
+
+
+  start.value = dateStartIdx;
+  end.value   = dateEndIdx;
+
+
+  document.getElementById('tc-first').textContent =
+    dateList[0];
+
+  document.getElementById('tc-last').textContent =
+    dateList[dateList.length - 1];
+
+
+  start.addEventListener('input', onDateInput);
+  end.addEventListener('input', onDateInput);
+
+
+  document.getElementById('time-controls')
+    .style.display = 'block';
+
+
+  updateDateLabel();
+
+}
+
+
+function onDateInput() {
+
+  const start = document.getElementById('tc-start');
+  const end   = document.getElementById('tc-end');
+
+
+  let a = Number(start.value);
+  let b = Number(end.value);
+
+
+  /*
+    Two independent handles can cross. Clamp rather than swap,
+    so the handle being dragged stays under the cursor.
+  */
+  if (a > b) {
+
+    if (document.activeElement === start)
+      b = a;
+    else
+      a = b;
+
+    start.value = a;
+    end.value   = b;
+
+  }
+
+
+  dateStartIdx = a;
+  dateEndIdx   = b;
+
+
+  applyDateWindow();
+
+}
+
+
+function resetDateWindow() {
+
+  if (dateList.length < 2)
+    return;
+
+
+  dateStartIdx = 0;
+  dateEndIdx   = dateList.length - 1;
+
+
+  document.getElementById('tc-start').value = dateStartIdx;
+  document.getElementById('tc-end').value   = dateEndIdx;
+
+
+  applyDateWindow();
+
+}
+
+
+function applyDateWindow() {
+
+  const rows = visibleData();
+
+
+  renderMarkers(rows);
+  rebuildHeat(rows);
+  updateStatsFromRows(rows);
+
+
+  /* Keep whatever classification filter is currently selected. */
+  const activeFilter =
+    document.querySelector(
+      '.filter-btn.active:not(.sort-btn)'
+    );
+
+
+  renderFeed(
+    activeFilter
+      ? activeFilter.dataset.f
+      : 'all'
+  );
+
+
+  updateDateLabel();
+
+}
+
+
+/*
+  Header counts are derived from the rows actually on screen
+  rather than from /api/stats, which always describes the whole
+  snapshot. Otherwise narrowing the window would leave the
+  header claiming detections the map is no longer showing.
+*/
+function updateStatsFromRows(rows) {
+
+  const count =
+    label =>
+      rows.filter(
+        d => d.final_label === label
+      ).length;
+
+
+  document.getElementById('s-industrial').textContent =
+    count('industrial_fire');
+
+  document.getElementById('s-possible').textContent =
+    count('persistent_industrial_source');
+
+  document.getElementById('s-other').textContent =
+    count('insufficient_evidence');
+
+  document.getElementById('s-total').textContent =
+    rows.length;
+
+}
+
+
+function updateDateLabel() {
+
+  if (!dateList.length)
+    return;
+
+
+  const from = dateList[dateStartIdx];
+  const to   = dateList[dateEndIdx];
+
+
+  const count = visibleData().length;
+
+  const days = dateEndIdx - dateStartIdx + 1;
+
+
+  document.getElementById('tc-range').textContent =
+    from === to
+      ? from
+      : from + ' → ' + to;
+
+
+  document.getElementById('tc-count').textContent =
+    count + ' detections · ' +
+    days + (days === 1 ? ' day' : ' days');
+
+}
+
+
+/* =========================================================
+   LAYER SWITCHING
+========================================================= */
+
+function setBasemap(kind) {
+
+  [darkBasemap, satelliteBasemap].forEach(
+    layer => {
+      if (map.hasLayer(layer))
+        map.removeLayer(layer);
+    }
+  );
+
+  const chosen =
+    kind === 'satellite'
+      ? satelliteBasemap
+      : darkBasemap;
+
+  chosen.addTo(map);
+  chosen.bringToBack();
+
+  document
+    .querySelectorAll('[data-basemap]')
+    .forEach(
+      btn =>
+        btn.classList.toggle(
+          'active',
+          btn.dataset.basemap === kind
+        )
+    );
+
+}
+
+
+function toggleOverlay(kind, on) {
+
+  const layer =
+    kind === 'gibs'
+      ? gibsOverlay
+      : heatLayer;
+
+  if (!layer)
+    return;
+
+  if (on) {
+
+    layer.addTo(map);
+
+    if (kind === 'gibs')
+      gibsOverlay.bringToFront();
+
+  } else {
+
+    map.removeLayer(layer);
+
+  }
+
+  const btn =
+    document.querySelector(
+      '[data-overlay="' + kind + '"]'
+    );
+
+  if (btn)
+    btn.classList.toggle('active', on);
+
+}
 
 /* =========================================================
    COLORS
@@ -1439,25 +2281,36 @@ fetch('/api/stats')
 .then(r => r.json())
 .then(s => {
 
-  document.getElementById(
-    's-industrial'
-  ).textContent =
-    s.industrial_fire;
+  /*
+    Header counts are NOT set here. This response describes the
+    whole snapshot, while the header tracks the observation
+    window -- updateStatsFromRows() owns those four numbers so
+    the two cannot race and disagree. This handler only supplies
+    provenance and the imagery date.
+  */
+
+  const range =
+    s.date_range
+      ? s.date_range[0] + ' → ' + s.date_range[1]
+      : 'unknown range';
+
+
+  /*
+    Point the NASA imagery at the snapshot's most recent
+    detection day.
+  */
+  if (s.date_range && s.date_range[1])
+    gibsOverlay.setUrl(
+      gibsUrl(s.date_range[1])
+    );
 
   document.getElementById(
-    's-possible'
+    'snapshot-badge'
   ).textContent =
-    s.persistent_industrial_source;
-
-  document.getElementById(
-    's-other'
-  ).textContent =
-    s.insufficient_evidence;
-
-  document.getElementById(
-    's-total'
-  ).textContent =
-    s.total;
+    'snapshot ' +
+    (s.snapshot_id || 'unknown') +
+    ' · ' +
+    range;
 
 });
 
@@ -2797,10 +3650,17 @@ function renderFeed(filter) {
   feedList.innerHTML = '';
 
 
+  /*
+    Reads the observation window, not allData, so the feed lists
+    the same days the map is plotting.
+  */
+  const windowed = visibleData();
+
+
   let filtered =
     filter === 'all'
-      ? allData.slice()
-      : allData.filter(
+      ? windowed
+      : windowed.filter(
           d =>
             d.final_label === filter
         );
@@ -3309,8 +4169,25 @@ const INDIA_BOUNDS = {
 };
 
 
+/*
+  Served locally (see build_india_boundary.py).
+
+  This used to point at a ~6.6 MB file on raw.githubusercontent.com,
+  fetched inside the same Promise.all as the detections -- so nothing
+  rendered at all until that download finished, and a slow connection
+  or a GitHub rate-limit left the map and feed permanently empty.
+  The local copy is ~379 KB and has no external dependency.
+*/
 const INDIA_BOUNDARY_URL =
-  'https://raw.githubusercontent.com/datameet/maps/master/Country/india-osm.geojson';
+  '/static/india_boundary.json';
+
+
+/*
+  Hard ceiling on how long the boundary may delay the first paint.
+  If it is not ready in time the map still renders, using the
+  bounding-box filter, and simply skips the finer polygon test.
+*/
+const BOUNDARY_TIMEOUT_MS = 2500;
 
 
 let indiaGeometry = null;
@@ -3323,13 +4200,44 @@ async function loadIndiaBoundary() {
       INDIA_BOUNDARY_URL
     );
 
-  const geojson =
-    await resp.json();
+  if (!resp.ok)
+    throw new Error(
+      'boundary HTTP ' + resp.status
+    );
 
   indiaGeometry =
-    geojson.features[0];
+    await resp.json();
 
   return indiaGeometry;
+
+}
+
+
+function loadIndiaBoundaryOrSkip() {
+
+  return Promise.race([
+
+    loadIndiaBoundary()
+      .catch(err => {
+
+        console.warn(
+          'India boundary failed to load:',
+          err
+        );
+
+        return null;
+
+      }),
+
+    new Promise(
+      resolve =>
+        setTimeout(
+          () => resolve(null),
+          BOUNDARY_TIMEOUT_MS
+        )
+    )
+
+  ]);
 
 }
 
@@ -3410,17 +4318,7 @@ Promise.all([
   fetch('/api/clusters')
     .then(r => r.json()),
 
-  loadIndiaBoundary()
-    .catch(err => {
-
-      console.error(
-        'Failed to load India boundary:',
-        err
-      );
-
-      return null;
-
-    })
+  loadIndiaBoundaryOrSkip()
 
 ])
 .then(
@@ -3471,27 +4369,87 @@ Promise.all([
       clusters;
 
 
-    const clusterMarkers = [];
+    initDateWindow();
 
 
-    allData.forEach(d => {
+    const rows = visibleData();
+
+    renderMarkers(rows);
+    rebuildHeat(rows);
+    updateStatsFromRows(rows);
+
+    renderFeed('all');
+
+  }
+);
+
+
+/* =========================================================
+   MARKERS
+
+   Re-runnable: the observation-window slider calls this again
+   with a narrower row set, so it has to clear the previous
+   dots and drop stale references rather than append.
+========================================================= */
+
+function renderMarkers(rows) {
+
+  window.markerClusterGroup.clearLayers();
+
+  window.markerRefs = [];
+
+
+  /*
+    A dot that no longer exists cannot stay selected, and its
+    glow ring lives outside the cluster group so it would
+    otherwise survive the clear.
+  */
+  window.selectedMarkerIdx = null;
+
+  if (window.glowMarker) {
+    map.removeLayer(window.glowMarker);
+    window.glowMarker = null;
+  }
+
+
+  const clusterMarkers = [];
+
+
+  rows.forEach(d => {
 
       const isHigh =
         d.final_label !==
         'insufficient_evidence';
 
 
-      const baseRadius =
+      /*
+        Size by thermal strength, not just category, so a violent
+        fire reads as bigger than a marginal one at a glance.
+        Category still drives colour. sqrt keeps a single huge FRP
+        from dwarfing everything else on the map.
+      */
+      const categoryRadius =
         d.final_label ===
         'industrial_fire'
 
-        ? 7
+        ? 6
 
         : (
             isHigh
-              ? 5
+              ? 4.5
               : 3
           );
+
+      const frpBoost =
+        Math.min(
+          Math.sqrt(
+            Math.max(Number(d.frp) || 0, 0)
+          ) / 2.2,
+          4.5
+        );
+
+      const baseRadius =
+        categoryRadius + frpBoost;
 
 
       /*
@@ -3549,16 +4507,16 @@ Promise.all([
     });
 
 
-    window.markerClusterGroup
-      .addLayers(
-        clusterMarkers
-      );
+  window.markerClusterGroup
+    .addLayers(
+      clusterMarkers
+    );
 
 
-    renderFeed('all');
+  /* Selection was just dropped -- hide its leader line. */
+  updateConnector();
 
-  }
-);
+}
 
 
 /* =========================================================
