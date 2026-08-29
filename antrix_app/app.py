@@ -1,8 +1,20 @@
 from flask import Flask, render_template, jsonify
 import pandas as pd
+import json
 import os
 
 app = Flask(__name__)
+
+SNAPSHOT_FILE = os.path.join(os.path.dirname(__file__), "data_snapshot.json")
+
+
+def load_snapshot():
+    """Provenance for the data this instance is serving (written by run_pipeline.py)."""
+    try:
+        with open(SNAPSHOT_FILE) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {"snapshot_id": "unknown", "generated_at": "unknown"}
 
 @app.route("/")
 def index():
@@ -31,11 +43,15 @@ def clusters():
 def stats():
     df = pd.read_csv("firms_final.csv")
     counts = df["final_label"].value_counts().to_dict()
+    snapshot = load_snapshot()
     return jsonify({
         "total": len(df),
         "industrial_fire": counts.get("industrial_fire", 0),
         "persistent_industrial_source": counts.get("persistent_industrial_source", 0),
-        "insufficient_evidence": counts.get("insufficient_evidence", 0)
+        "insufficient_evidence": counts.get("insufficient_evidence", 0),
+        "snapshot_id": snapshot.get("snapshot_id"),
+        "generated_at": snapshot.get("generated_at"),
+        "date_range": snapshot.get("date_range"),
     })
 
 if __name__ == "__main__":

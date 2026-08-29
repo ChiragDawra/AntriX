@@ -12,9 +12,12 @@ Usage:
     python run_pipeline.py --no-serve # run pipeline only, skip starting the app
 """
 
+import hashlib
+import json
 import shutil
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -24,7 +27,8 @@ REQUIRED_INPUTS = ["firms_raw.csv", "osm_industrial.json"]
 
 # Order matters: each step reads columns written by the ones before it.
 PIPELINE = [
-    "compute_distance.py",          # firms_raw.csv + osm_industrial.json -> firms_with_distance.csv
+    "clean_detections.py",          # firms_raw.csv -> firms_clean.csv (confidence + dedup)
+    "compute_distance.py",          # firms_clean.csv + osm_industrial.json -> firms_with_distance.csv
     "compute_recurrence.py",        # firms_with_distance.csv             -> firms_with_features.csv
     "label_data.py",                # firms_with_features.csv             -> firms_labeled.csv
     "train_model_v2.py",            # firms_labeled.csv                   -> antrix_model_v2.pkl
@@ -37,6 +41,37 @@ PIPELINE = [
     "reclassify_v3.py",             # -> final_label / evidence_level (final classification)
     "compute_clusters.py",          # -> firms_final.csv + clusters.csv
 ]
+
+
+def write_snapshot() -> dict:
+    """
+    Record what data this pipeline run produced.
+
+    The dashboard reads this back through /api/stats and shows it in the
+    UI, so a local instance and a deployed instance can be compared at a
+    glance. Without it, two machines that fetched FIRMS at different
+    times silently disagree on detection counts -- FIRMS is a live feed,
+    so every fetch returns a different window.
+    """
+    import pandas as pd
+
+    detections = pd.read_csv(ROOT / "firms_final.csv")
+    digest = hashlib.md5(
+        (ROOT / "firms_final.csv").read_bytes()
+    ).hexdigest()[:8]
+
+    snapshot = {
+        "snapshot_id": digest,
+        "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        "total_detections": int(len(detections)),
+        "date_range": [
+            str(detections["acq_date"].min()),
+            str(detections["acq_date"].max()),
+        ],
+    }
+
+    (ROOT / "data_snapshot.json").write_text(json.dumps(snapshot, indent=2))
+    return snapshot
 
 
 def run_step(script: str) -> None:
@@ -63,9 +98,21 @@ def main() -> None:
 
     print("\nPipeline complete: firms_final.csv and clusters.csv are up to date.")
 
-    for f in ("firms_final.csv", "clusters.csv"):
+    snapshot = write_snapshot()
+
+    for f in ("firms_final.csv", "clusters.csv", "data_snapshot.json"):
         shutil.copy(ROOT / f, APP_DIR / f)
-    print(f"Copied firms_final.csv and clusters.csv into {APP_DIR}/")
+    print(f"Copied data files into {APP_DIR}/")
+
+    print(
+        f"\nSnapshot {snapshot['snapshot_id']}: "
+        f"{snapshot['total_detections']} detections, "
+        f"{snapshot['date_range'][0]} to {snapshot['date_range'][1]}"
+    )
+    print(
+        "Commit and push antrix_app/ so the deployed app serves this same "
+        "snapshot -- otherwise local and hosted will disagree."
+    )
 
     if serve:
         print("\nStarting web app at http://localhost:5000 (Ctrl+C to stop)...")

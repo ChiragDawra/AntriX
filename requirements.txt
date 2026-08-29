@@ -3,6 +3,7 @@ pandas
 numpy
 folium
 geopandas
+shapely
 osmnx
 requests
 scikit-learn

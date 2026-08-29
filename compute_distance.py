@@ -2,7 +2,7 @@ import pandas as pd
 import json
 from math import radians, sin, cos, sqrt, atan2
 
-fires = pd.read_csv("firms_raw.csv")
+fires = pd.read_csv("firms_clean.csv")
 
 with open("osm_industrial.json") as f:
     osm = json.load(f)
