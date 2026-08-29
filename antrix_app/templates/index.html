@@ -1327,20 +1327,20 @@ L.control.zoom({
 
 
 /*
-  FIXED: Single combined dark tile layer.
-  The previous split dark_nolabels + dark_only_labels setup
-  requires a CARTO API key on the current free tier and was
-  showing "API KEY REQUIRED" watermarks over the whole map.
-  dark_all is the same free, no-key tile source used
-  successfully throughout the rest of this project.
+  FIXED: CARTO's basemaps.cartocdn.com dark_all tiles now require
+  an API key even for anonymous/free use (CARTO deprecated the old
+  no-key tier) — this was showing "API KEY REQUIRED" watermarks over
+  the whole map, especially on hosted deploys. Switched to Esri's
+  Dark Gray Canvas, no key required — same source already used
+  successfully for the per-detection satellite thumbnail below.
 */
 
 L.tileLayer(
-  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+  'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
   {
-    attribution: '© OpenStreetMap contributors © CARTO',
-    subdomains: 'abcd',
-    maxZoom: 20
+    attribution: '© Esri, HERE, Garmin, © OpenStreetMap contributors',
+    maxZoom: 20,
+    maxNativeZoom: 16
   }
 ).addTo(map);
 
