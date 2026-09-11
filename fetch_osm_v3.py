@@ -3,7 +3,7 @@ import json
 import time
 
 overpass_url = "https://overpass-api.de/api/interpreter"
-headers = {"User-Agent": "AntriX-Project/1.0"}
+headers = {"User-Agent": "SATAT-Project/1.0"}
 
 regions = {
     "bokaro_jamshedpur": "22.5,85.5,24.5,87.0",

@@ -1,10 +1,10 @@
-# AntriX 🇮🇳
+# SATAT 🇮🇳
 
 ## Satellite-based Industrial Anomaly Tracking & Assessment
 
 > **An India-focused satellite intelligence system for detecting, contextualizing, classifying and prioritizing industrial thermal anomalies.**
 
-AntriX fuses **NASA FIRMS (VIIRS/MODIS) satellite fire-detection data** with **OpenStreetMap industrial facility data** to turn a raw stream of thermal detections into a small, ranked set of locations that actually deserve investigation — separating genuine **industrial fires/flaring** from wildfire/agricultural burns and one-off noise.
+SATAT fuses **NASA FIRMS (VIIRS/MODIS) satellite fire-detection data** with **OpenStreetMap industrial facility data** to turn a raw stream of thermal detections into a small, ranked set of locations that actually deserve investigation — separating genuine **industrial fires/flaring** from wildfire/agricultural burns and one-off noise.
 
 ---
 
@@ -18,7 +18,7 @@ A satellite thermal sensor can throw off thousands of detections a day. A single
 - Whether there's enough context to trust a label
 - Which detections deserve a human look first
 
-Manually triaging thousands of raw points doesn't scale. AntriX adds **industrial context, spatial reasoning, temporal persistence and evidence-based prioritization** on top of the raw satellite feed.
+Manually triaging thousands of raw points doesn't scale. SATAT adds **industrial context, spatial reasoning, temporal persistence and evidence-based prioritization** on top of the raw satellite feed.
 
 ---
 
@@ -86,7 +86,7 @@ Focused on **India**: OSM industrial-facility pull, FIRMS detection window, and 
              THERMAL
         FRP / brightness / abnormality
                    │
-SPATIAL ─────── AntriX ─────── TEMPORAL
+SPATIAL ─────── SATAT ─────── TEMPORAL
 Facility           │            Recurrence /
 distance           │            persistence
                    ▼
@@ -123,7 +123,9 @@ Flask + Leaflet (`antrix_app/`), with `leaflet.markercluster` for detection clus
 
 **Overlays** — *Thermal Density*, an FRP-weighted heatmap answering "where is thermal activity concentrated" independent of how individual points cluster; and *NASA VIIRS Imagery*, true-colour GIBS tiles for the snapshot's most recent day.
 
-**Observation Window** — the snapshot spans several acquisition days, all flattened onto one map by default. The dual slider narrows it to a contiguous run of dates. Map dots, the density layer, the feed and the four header counts all read from that same window, so they cannot disagree.
+**Phone layout** — below 900px (or on any coarse pointer) the feed stops being a column beside the map and becomes a bottom sheet over it. The header button opens the full-screen case list; picking a case zooms the map to that detection and raises its evidence card to mid height, draggable to full or down to dismiss. Tapping near a dot selects the nearest detection within a thumb's radius, and a floating button opens the basemap/overlay dialog.
+
+**Observation window** — every surface (map dots, density layer, feed, header counts) reads the same row set via `visibleData()`, so they cannot disagree. The date-range scrubber was removed: the snapshot is a short fixed window, and a range control over five days was more chrome than signal. When the feed becomes live, `visibleData()` is the single place that needs to learn about a window again.
 
 **Marker size** encodes FRP (`sqrt`-scaled and capped), colour encodes classification.
 
@@ -318,7 +320,7 @@ Before a demo, freeze the data: one person runs the pipeline, commits
 
 ## ⚠️ Data & Operational Considerations
 
-AntriX is a **decision-support / investigation-prioritization** tool, not a verdict machine. A classification isn't proof of an incident on its own — satellite readings are affected by cloud cover, sensor limitations, revisit frequency, spatial resolution and geolocation uncertainty. Treat output as a ranked queue for human verification, not an automated finding.
+SATAT is a **decision-support / investigation-prioritization** tool, not a verdict machine. A classification isn't proof of an incident on its own — satellite readings are affected by cloud cover, sensor limitations, revisit frequency, spatial resolution and geolocation uncertainty. Treat output as a ranked queue for human verification, not an automated finding.
 
 ---
 
@@ -339,7 +341,7 @@ Additional sensors, more frequent ingestion, expanded industrial datasets, bette
 
 ## 👥 Project Information
 
-**Project:** AntriX
+**Project:** SATAT
 **Focus:** India 🇮🇳
 **Domain:** Satellite Intelligence / Geospatial Analytics / Machine Learning
 

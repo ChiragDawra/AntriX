@@ -16,7 +16,7 @@ query = f"""
 out center;
 """
 
-headers = {"User-Agent": "AntriX-Project/1.0"}
+headers = {"User-Agent": "SATAT-Project/1.0"}
 
 print("Querying Overpass directly...")
 response = requests.post(overpass_url, data={"data": query}, headers=headers, timeout=60)

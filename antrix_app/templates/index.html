@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>AntriX — Industrial Thermal Anomaly Detection</title>
+<title>SATAT — Industrial Thermal Anomaly Detection</title>
 
 <link rel="stylesheet"
 href="/static/vendor/leaflet.css"/>
@@ -29,13 +29,13 @@ rel="stylesheet" media="print" onload="this.media='all'">
 <style>
 
 :root {
-  --bg: #07070d;
-  --panel: #0b0a13;
-  --panel2: #100d1d;
+  --bg: #06060c;
+  --panel: #0a0912;
+  --panel2: #0f0d1a;
   --panel3: #151126;
 
-  --border: #27223b;
-  --border2: #33284d;
+  --border: #211c33;
+  --border2: #2e2646;
 
   --text: #f5f3ff;
   --text2: #ddd8ee;
@@ -56,6 +56,20 @@ rel="stylesheet" media="print" onload="this.media='all'">
   --green: #19c38a;
 
   --navy: #0c0920;
+
+  /* shared surface language: one hairline, one glass, one lift */
+  --glass: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.012));
+  --hairline: 1px solid var(--border);
+  --lift: 0 18px 40px rgba(0,0,0,.45);
+  --r-sm: 9px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+
+  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* header height: mobile layout maths depend on it */
+  --hdr: 74px;
 }
 
 * {
@@ -82,43 +96,71 @@ body {
 ========================================================= */
 
 #topbar {
-  height: 76px;
-
-  background:
-    linear-gradient(
-      115deg,
-      #08070f 0%,
-      #10091e 45%,
-      #0b0817 100%
-    );
-
-  border-bottom: 1px solid #29213d;
+  height: var(--hdr);
 
   display: flex;
   align-items: center;
+  gap: 16px;
 
-  padding: 0 32px;
+  padding: 0 22px;
 
-  box-shadow:
-    0 8px 30px rgba(0,0,0,.35);
+  background:
+    radial-gradient(130% 260% at 0% 0%, rgba(139,61,255,.20), transparent 58%),
+    linear-gradient(180deg, #0c0a17 0%, #08070f 100%);
+
+  border-bottom: var(--hairline);
 
   position: relative;
   z-index: 1000;
 }
 
+/* Accent hairline: ties the header to the classification palette. */
+#topbar::after {
+  content: '';
+
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+
+  height: 1px;
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(139,61,255,.6) 25%,
+      rgba(255,110,60,.35) 65%,
+      transparent
+    );
+}
+
+#brand-row {
+  display: flex;
+  align-items: center;
+
+  gap: 14px;
+
+  min-width: 0;
+}
+
 #brand {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
+
+  min-width: 0;
 }
 
 #mark {
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
 
-  border-radius: 9px;
+  flex-shrink: 0;
 
-  background: transparent;
+  border-radius: var(--r-md);
+
+  background: rgba(139,61,255,.07);
 
   display: flex;
   align-items: center;
@@ -127,7 +169,8 @@ body {
   overflow: hidden;
 
   box-shadow:
-    0 0 18px rgba(139,61,255,.18);
+    0 0 0 1px rgba(139,61,255,.22),
+    0 0 22px rgba(139,61,255,.20);
 }
 
 #mark svg {
@@ -139,72 +182,216 @@ body {
 
 #logo {
   font-weight: 800;
-  font-size: 19px;
-  color: #fff;
-  letter-spacing: -.3px;
-  line-height: 1.1;
+  font-size: 20px;
+
+  letter-spacing: 1.4px;
+  line-height: 1.05;
+
+  background:
+    linear-gradient(100deg, #ffffff 20%, #cfaaff 70%, #ff9d63 100%);
+
+  -webkit-background-clip: text;
+  background-clip: text;
+
+  color: transparent;
 }
 
 #tagline {
   font-size: 11.5px;
   color: #8e879f;
-  margin-top: 2px;
+
+  margin-top: 3px;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Live pill: makes it obvious the counts belong to a feed, not a file. */
+#live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 4px 10px;
+
+  border-radius: 999px;
+
+  border: 1px solid rgba(25,195,138,.28);
+
+  background: rgba(25,195,138,.09);
+
+  font-size: 10px;
+  font-weight: 700;
+
+  letter-spacing: .7px;
+  text-transform: uppercase;
+
+  color: #7ff0c4;
+
+  white-space: nowrap;
+}
+
+#live-pill .pulse {
+  width: 6px;
+  height: 6px;
+
+  border-radius: 50%;
+
+  background: var(--green);
+
+  box-shadow: 0 0 0 0 rgba(25,195,138,.65);
+
+  animation: pulse 2.2s infinite;
+}
+
+@keyframes pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(25,195,138,.55); }
+  70%  { box-shadow: 0 0 0 7px rgba(25,195,138,0); }
+  100% { box-shadow: 0 0 0 0 rgba(25,195,138,0); }
 }
 
 #stats {
   display: flex;
+  gap: 8px;
+
   margin-left: auto;
 }
 
 .stat {
-  padding: 0 24px;
-  border-left: 1px solid rgba(255,255,255,.08);
-  text-align: right;
+  position: relative;
+
+  min-width: 108px;
+
+  padding: 9px 13px 8px;
+
+  border: var(--hairline);
+  border-radius: var(--r-md);
+
+  background: var(--glass);
+
+  overflow: hidden;
+
+  transition: border-color .18s ease, transform .18s ease;
 }
 
-.stat {
-  transition: background .15s ease;
+.stat::before {
+  content: '';
+
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+
+  width: 2px;
+
+  background: var(--accent, #3b3450);
 }
+
+.stat.s-fire   { --accent: var(--red); }
+.stat.s-persist{ --accent: var(--orange); }
+.stat.s-insuff { --accent: var(--gray); }
+.stat.s-total  { --accent: var(--purple2); }
 
 .stat:hover {
-  background: rgba(255,255,255,.025);
+  border-color: var(--border2);
+  transform: translateY(-1px);
 }
 
 .stat .val {
-  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--mono);
   font-weight: 700;
-  font-size: 21px;
+  font-size: 22px;
+
   color: #fff;
   line-height: 1;
 
-  /* Counts change as the window is scrubbed; fixed-width
-     digits stop the header jittering while dragging. */
+  /* Counts re-render on filter changes; tabular digits stop jitter. */
   font-variant-numeric: tabular-nums;
 }
 
 .stat .lbl {
-  font-size: 10.5px;
-  color: #777187;
-  text-transform: uppercase;
-  letter-spacing: .6px;
+  font-size: 9.5px;
+  color: #8b8499;
 
-  margin-top: 5px;
+  text-transform: uppercase;
+  letter-spacing: .7px;
+
+  margin-top: 6px;
 
   display: flex;
   align-items: center;
-  justify-content: flex-end;
 
   gap: 6px;
+
+  white-space: nowrap;
 }
 
 .dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
+
   border-radius: 50%;
+
   display: inline-block;
+  flex-shrink: 0;
 
   /* Ties the legend swatch to the glow used on the map dots. */
   box-shadow: 0 0 7px currentColor;
+}
+
+/* Header button that reveals the report list on small screens. */
+#nav-toggle {
+  display: none;
+
+  width: 40px;
+  height: 40px;
+
+  flex-shrink: 0;
+
+  margin-left: auto;
+
+  align-items: center;
+  justify-content: center;
+
+  border: var(--hairline);
+  border-radius: var(--r-md);
+
+  background: var(--glass);
+
+  color: #d9d3ec;
+
+  cursor: pointer;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+#nav-toggle:active {
+  background: rgba(139,61,255,.16);
+}
+
+#nav-toggle .badge {
+  position: absolute;
+
+  transform: translate(14px,-12px);
+
+  min-width: 16px;
+  height: 16px;
+
+  padding: 0 4px;
+
+  border-radius: 8px;
+
+  background: var(--red);
+
+  color: #fff;
+
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 16px;
+
+  text-align: center;
 }
 
 /* =========================================================
@@ -213,27 +400,25 @@ body {
 
 #layout {
   display: flex;
-  height: calc(100vh - 76px);
+  height: calc(100vh - var(--hdr));
 }
 
 #map {
   flex: 1;
   position: relative;
   background: #050509;
+
+  min-width: 0;
 }
 
 #feed {
-  width: 400px;
+  width: 410px;
   flex-shrink: 0;
 
   background:
-    linear-gradient(
-      180deg,
-      #0b0913 0%,
-      #090810 100%
-    );
+    linear-gradient(180deg, #0a0912 0%, #08070e 100%);
 
-  border-left: 1px solid #2b2340;
+  border-left: var(--hairline);
 
   display: flex;
   flex-direction: column;
@@ -242,8 +427,7 @@ body {
 
   min-width: 0;
 
-  box-shadow:
-    -12px 0 35px rgba(0,0,0,.25);
+  box-shadow: -18px 0 45px rgba(0,0,0,.35);
 }
 
 /* =========================================================
@@ -282,81 +466,147 @@ body {
 ========================================================= */
 
 #feed-header {
-  padding: 20px 22px 14px;
+  padding: 18px 20px 12px;
+
+  display: flex;
+  align-items: flex-start;
+
+  gap: 10px;
 }
 
 #feed-header h2 {
   font-size: 15px;
   font-weight: 700;
+
   color: #f5f3ff;
+
+  letter-spacing: -.2px;
 }
 
 #feed-header .sub {
   color: #8f89a4;
-  font-size: 12px;
-  margin-top: 3px;
+  font-size: 11.5px;
+
+  margin-top: 4px;
+
+  line-height: 1.35;
 }
 
-#filters {
+/* Mobile-only dismiss for the full-screen report list. */
+#sheet-close {
+  display: none;
+
+  width: 34px;
+  height: 34px;
+
+  flex-shrink: 0;
+
+  margin-left: auto;
+
+  align-items: center;
+  justify-content: center;
+
+  border: var(--hairline);
+  border-radius: 50%;
+
+  background: var(--glass);
+
+  color: #cfc9e0;
+
+  font-size: 16px;
+  line-height: 1;
+
+  cursor: pointer;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+#filters,
+#sortrow {
   display: flex;
   gap: 6px;
 
-  padding: 0 18px 14px;
+  padding: 0 16px 12px;
 
-  border-bottom: 1px solid #211b31;
+  /* Chips stay on one line and scroll instead of wrapping. */
+  overflow-x: auto;
+
+  scrollbar-width: none;
+}
+
+#filters::-webkit-scrollbar,
+#sortrow::-webkit-scrollbar {
+  display: none;
+}
+
+#sortrow {
+  padding: 10px 16px;
+
+  align-items: center;
+
+  border-top: 1px solid #191430;
+  border-bottom: var(--hairline);
+}
+
+#filters {
+  border-bottom: 1px solid #191430;
 }
 
 .filter-btn {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: inherit;
 
   font-size: 11.5px;
   font-weight: 600;
 
-  padding: 6px 12px;
+  padding: 7px 13px;
 
-  border-radius: 20px;
+  flex-shrink: 0;
 
-  border: 1px solid #302746;
+  border-radius: 999px;
 
-  background: #0c0a14;
+  border: var(--hairline);
+
+  background: var(--glass);
 
   color: #9a93ad;
 
   cursor: pointer;
 
-  transition: .15s ease;
+  white-space: nowrap;
+
+  transition: color .15s ease, border-color .15s ease, background .15s ease;
+
+  -webkit-tap-highlight-color: transparent;
 }
 
 .filter-btn:hover {
-  border-color: #7340bd;
+  border-color: #6b46b5;
   color: #ddd6ef;
 }
 
 .filter-btn.active {
   background:
-    linear-gradient(
-      135deg,
-      #35106d,
-      #5d1cad
-    );
+    linear-gradient(135deg, #4b1a9a, #7b2ee0);
 
   color: #fff;
 
   border-color: #8743e8;
 
-  box-shadow:
-    0 0 16px rgba(139,61,255,.18);
+  box-shadow: 0 4px 18px rgba(139,61,255,.28);
 }
 
-#sortrow {
-  display: flex;
-  gap: 6px;
+.sortrow-label {
+  font-size: 10px;
+  font-weight: 700;
 
-  padding: 10px 18px;
+  letter-spacing: .7px;
+  text-transform: uppercase;
 
-  border-bottom: 1px solid #211b31;
+  color: #6f6980;
 
-  align-items: center;
+  flex-shrink: 0;
+
+  margin-right: 2px;
 }
 
 /* =========================================================
@@ -365,9 +615,11 @@ body {
 
 #feed-list {
   flex: 1;
-  overflow-y: auto;
 
-  padding: 14px 16px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+
+  padding: 14px 16px 24px;
 }
 
 #feed-list::-webkit-scrollbar,
@@ -377,190 +629,226 @@ body {
 
 #feed-list::-webkit-scrollbar-thumb,
 #ev-body::-webkit-scrollbar-thumb {
-  background: #302742;
+  background: #2b2440;
   border-radius: 10px;
 }
 
 .feed-item {
-  background:
-    linear-gradient(
-      135deg,
-      #0d0b15,
-      #0b0911
-    );
+  position: relative;
 
-  border: 1px solid #272136;
+  background: linear-gradient(150deg, #0e0c1a, #0a0910);
 
-  border-left: 3px solid var(--gray);
+  border: var(--hairline);
+  border-radius: var(--r-lg);
 
-  border-radius: 9px;
-
-  padding: 12px 14px;
+  padding: 13px 15px 13px 17px;
 
   margin-bottom: 10px;
+
+  overflow: hidden;
 
   cursor: pointer;
 
   transition:
     border-color .15s ease,
     background .15s ease,
-    transform .15s ease;
+    transform .15s ease,
+    box-shadow .15s ease;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Category accent rail, replaces the old flat left border. */
+.feed-item::before {
+  content: '';
+
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+
+  width: 3px;
+
+  background:
+    linear-gradient(180deg, var(--accent, var(--gray)), transparent 140%);
 }
 
 .feed-item:hover {
-  background: #11101a;
-  border-color: #3c3154;
-  transform: translateX(-1px);
+  background: #12101d;
+  border-color: var(--border2);
+
+  transform: translateY(-1px);
+
+  box-shadow: 0 10px 26px rgba(0,0,0,.35);
 }
 
-.feed-item.industrial_fire {
-  border-left-color: var(--red);
+.feed-item:active {
+  transform: scale(.995);
 }
 
-.feed-item.persistent_industrial_source {
-  border-left-color: var(--orange);
-}
-
-.feed-item.insufficient_evidence {
-  border-left-color: var(--gray);
-}
+.feed-item.industrial_fire              { --accent: var(--red); }
+.feed-item.persistent_industrial_source { --accent: var(--orange); }
+.feed-item.insufficient_evidence        { --accent: var(--gray); }
 
 .feed-item .row1 {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
+
+  gap: 8px;
+
+  flex-wrap: wrap;
+}
+
+.feed-item .pill {
+  font-size: 9px;
+  font-weight: 800;
+
+  letter-spacing: .6px;
+
+  padding: 3px 8px;
+
+  border-radius: 999px;
+
+  color: #fff;
+
+  white-space: nowrap;
 }
 
 .feed-item .label {
   font-weight: 700;
-  font-size: 11.5px;
+  font-size: 11px;
 
   text-transform: uppercase;
-  letter-spacing: .4px;
+  letter-spacing: .45px;
 
-  color: var(--gray);
+  color: var(--accent, var(--gray));
 }
 
-.feed-item.industrial_fire .label {
-  color: var(--red);
+.feed-item .scores {
+  display: flex;
+  gap: 8px;
+
+  margin-top: 9px;
 }
 
-.feed-item.persistent_industrial_source .label {
-  color: var(--orange);
+.feed-item .chip {
+  flex: 1;
+
+  min-width: 0;
+
+  padding: 6px 9px;
+
+  border-radius: var(--r-sm);
+
+  border: 1px solid #201b31;
+
+  background: rgba(255,255,255,.022);
 }
 
-.feed-item .conf {
-  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 13px;
+.feed-item .chip .k {
+  font-size: 8.5px;
   font-weight: 700;
+
+  letter-spacing: .6px;
+  text-transform: uppercase;
+
+  color: #6f6980;
+}
+
+.feed-item .chip .v {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 700;
+
+  color: #efeaf9;
+
+  margin-top: 2px;
+
+  font-variant-numeric: tabular-nums;
 }
 
 .feed-item .meta {
   color: #8d879f;
-  font-size: 11.5px;
-  margin-top: 5px;
+  font-size: 11px;
+
+  margin-top: 9px;
+
+  line-height: 1.45;
 }
 
 .feed-item .meta b {
   color: #e9e4f2;
   font-weight: 600;
+
+  font-family: var(--mono);
 }
 
 /* =========================================================
-   MAP LEGEND
+   MAP OVERLAY PANELS
 ========================================================= */
 
-#legend {
+#legend,
+#layer-controls {
   position: absolute;
-
-  bottom: 24px;
-  left: 24px;
 
   z-index: 500;
 
-  background:
-    rgba(8,7,13,.94);
+  background: rgba(9,8,15,.86);
 
-  border: 1px solid #302741;
+  border: 1px solid rgba(255,255,255,.07);
 
-  padding: 16px 20px;
+  border-radius: var(--r-lg);
 
-  border-radius: 12px;
+  box-shadow: var(--lift);
 
-  font-size: 13px;
-
-  box-shadow:
-    0 12px 35px rgba(0,0,0,.45);
-
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
 }
 
-#legend .title {
+#legend {
+  bottom: 22px;
+  left: 22px;
+
+  padding: 14px 18px;
+
+  font-size: 12.5px;
+}
+
+#layer-controls {
+  top: 22px;
+  left: 22px;
+
+  padding: 14px 15px;
+
+  width: 186px;
+}
+
+#legend .title,
+#layer-controls .title {
   font-weight: 700;
-  font-size: 11px;
+  font-size: 10px;
 
   margin-bottom: 10px;
 
-  color: #a09aaf;
+  color: #8e879f;
 
   text-transform: uppercase;
-  letter-spacing: .6px;
+  letter-spacing: .8px;
+}
+
+#layer-controls .title.spaced {
+  margin-top: 14px;
 }
 
 #legend .row {
-  margin: 7px 0;
+  margin: 8px 0;
 
   display: flex;
   align-items: center;
 
   gap: 9px;
 
-  color: #e8e4ef;
-}
-
-/* =========================================================
-   LAYER CONTROLS
-========================================================= */
-
-#layer-controls {
-  position: absolute;
-
-  top: 24px;
-  left: 24px;
-
-  z-index: 500;
-
-  background:
-    rgba(8,7,13,.94);
-
-  border: 1px solid #302741;
-
-  padding: 14px 16px;
-
-  border-radius: 12px;
-
-  box-shadow:
-    0 12px 35px rgba(0,0,0,.45);
-
-  backdrop-filter: blur(10px);
-
-  width: 178px;
-}
-
-#layer-controls .title {
-  font-weight: 700;
-  font-size: 11px;
-
-  margin-bottom: 9px;
-
-  color: #a09aaf;
-
-  text-transform: uppercase;
-  letter-spacing: .6px;
-}
-
-#layer-controls .title.spaced {
-  margin-top: 15px;
+  color: #ddd8e7;
 }
 
 #layer-controls .btn-row {
@@ -577,15 +865,15 @@ body {
 #layer-controls button {
   flex: 1;
 
-  background: #16121f;
+  background: var(--glass);
 
-  border: 1px solid #302741;
+  border: var(--hairline);
 
   color: #a09aaf;
 
-  padding: 7px 9px;
+  padding: 9px 10px;
 
-  border-radius: 7px;
+  border-radius: 10px;
 
   font-size: 11.5px;
   font-family: inherit;
@@ -594,180 +882,65 @@ body {
   cursor: pointer;
 
   transition: all .15s;
+
+  -webkit-tap-highlight-color: transparent;
 }
 
 #layer-controls button:hover {
-  border-color: #4a3d63;
+  border-color: var(--border2);
   color: #e8e4ef;
 }
 
 #layer-controls button.active {
-  background: #6d3bd4;
+  background: linear-gradient(135deg, #4b1a9a, #7b2ee0);
   border-color: #8355e8;
   color: #fff;
+
+  box-shadow: 0 4px 16px rgba(139,61,255,.25);
 }
 
-/* =========================================================
-   TIME CONTROLS
+/* Legend copy shown inside the mobile layers dialog only. */
+.mobile-only {
+  display: none;
+}
 
-   The snapshot spans several observation days. Without this
-   every day is flattened onto one map, so a fire burning on
-   one date looks identical to a site that lit up all week.
-   Scrubbing the window is also what makes "persistent" and
-   "recurrence" legible during a walkthrough.
-========================================================= */
+/* Floating layers button (touch layouts). */
+#fab-layers {
+  display: none;
 
-#time-controls {
   position: absolute;
 
-  /*
-    Stacked under #layer-controls in the left rail rather than
-    bottom-left, which is where #legend sits.
-  */
-  top: 246px;
-  left: 24px;
+  right: 16px;
 
-  z-index: 500;
+  width: 48px;
+  height: 48px;
 
-  background:
-    rgba(8,7,13,.94);
+  z-index: 600;
 
-  border: 1px solid #302741;
+  align-items: center;
+  justify-content: center;
 
-  padding: 13px 16px 15px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 16px;
 
-  border-radius: 12px;
+  background: rgba(14,11,24,.92);
 
-  box-shadow:
-    0 12px 35px rgba(0,0,0,.45);
+  color: #ded7f0;
 
-  backdrop-filter: blur(10px);
+  box-shadow: var(--lift);
 
-  width: 224px;
-}
-
-#time-controls .title {
-  font-weight: 700;
-  font-size: 11px;
-
-  color: #a09aaf;
-
-  text-transform: uppercase;
-  letter-spacing: .6px;
-
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-
-  gap: 10px;
-
-  margin-bottom: 9px;
-}
-
-#tc-reset {
-  background: none;
-  border: none;
-
-  color: #6f6980;
-
-  font-family: inherit;
-  font-size: 10px;
-  font-weight: 700;
-
-  letter-spacing: .4px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 
   cursor: pointer;
 
-  padding: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
-#tc-reset:hover {
-  color: #c9a8ff;
-}
-
-#tc-range {
-  font-family:
-    ui-monospace, SFMono-Regular, Menlo, monospace;
-
-  font-size: 11.5px;
-  color: #e8e4ef;
-
-  white-space: nowrap;
-}
-
-#tc-count {
-  font-size: 10.5px;
-  color: #8e879f;
-
-  margin-top: 2px;
-  margin-bottom: 10px;
-}
-
-/* Two overlaid tracks: one handle for each end of the window. */
-#tc-sliders {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-#time-controls input[type=range] {
-  -webkit-appearance: none;
-  appearance: none;
-
-  width: 100%;
-  height: 4px;
-
-  background: #2a2237;
-
-  border-radius: 3px;
-
-  outline: none;
-
-  cursor: pointer;
-}
-
-#time-controls input[type=range]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-
-  width: 14px;
-  height: 14px;
-
-  border-radius: 50%;
-
-  background: #8b5cf6;
-
-  border: 2px solid #0d0a14;
-
-  box-shadow: 0 0 0 1px #8b5cf6;
-
-  cursor: pointer;
-}
-
-#time-controls input[type=range]::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-
-  border-radius: 50%;
-
-  background: #8b5cf6;
-
-  border: 2px solid #0d0a14;
-
-  cursor: pointer;
-}
-
-#tc-ticks {
-  display: flex;
-  justify-content: space-between;
-
-  font-size: 9.5px;
-  color: #5f5972;
-
-  font-family:
-    ui-monospace, SFMono-Regular, Menlo, monospace;
-
-  margin-top: 7px;
+#fab-layers.active {
+  background: linear-gradient(135deg, #4b1a9a, #7b2ee0);
+  border-color: #8355e8;
+  color: #fff;
 }
 
 /* =========================================================
@@ -1178,25 +1351,353 @@ body {
 }
 
 /* =========================================================
-   MOBILE
+   BOTTOM SHEET (touch layouts)
+
+   On phones the feed is not a column beside the map -- it is a
+   sheet over it. Two modes share the same DOM:
+
+     mode-list   full-screen list of reported cases
+     mode-detail draggable card, snapped to mid or full
+
+   Position is driven by one custom property (--sheet-y) that JS
+   writes on every animation frame while dragging, so the drag is
+   a single compositor-only transform with no layout work.
 ========================================================= */
 
-@media(max-width: 900px) {
+#sheet-grabber {
+  display: none;
 
-  #stats .stat {
-    padding: 0 10px;
+  padding: 10px 0 6px;
+
+  flex-shrink: 0;
+
+  cursor: grab;
+
+  touch-action: none;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+#sheet-grabber span {
+  display: block;
+
+  width: 42px;
+  height: 4px;
+
+  margin: 0 auto;
+
+  border-radius: 999px;
+
+  background: #3a3252;
+}
+
+#sheet-backdrop {
+  display: none;
+
+  position: fixed;
+  inset: 0;
+
+  z-index: 1300;
+
+  background: rgba(4,3,9,.55);
+
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+
+  opacity: 0;
+
+  transition: opacity .28s ease;
+}
+
+#sheet-backdrop.show {
+  opacity: 1;
+}
+
+@media (max-width: 900px), (pointer: coarse) and (max-width: 1100px) {
+
+  body {
+    display: flex;
+    flex-direction: column;
+
+    overscroll-behavior: none;
   }
 
-  #stats .stat:nth-child(1),
-  #stats .stat:nth-child(2) {
+  /* ---------- header ---------- */
+
+  #topbar {
+    height: auto;
+
+    flex-direction: column;
+    align-items: stretch;
+
+    gap: 10px;
+
+    padding: calc(env(safe-area-inset-top) + 10px) 14px 11px;
+  }
+
+  #brand-row {
+    display: flex;
+    align-items: center;
+
+    gap: 12px;
+  }
+
+  #mark {
+    width: 36px;
+    height: 36px;
+  }
+
+  #logo {
+    font-size: 18px;
+  }
+
+  #tagline {
+    font-size: 10.5px;
+  }
+
+  #live-pill {
     display: none;
   }
 
+  #nav-toggle {
+    display: flex;
+    position: relative;
+  }
+
+  #snapshot-badge {
+    font-size: 9px;
+  }
+
+  /* Stats become a compact, swipeable strip under the name. */
+  #stats {
+    margin-left: 0;
+
+    gap: 6px;
+
+    overflow-x: auto;
+
+    scrollbar-width: none;
+  }
+
+  #stats::-webkit-scrollbar {
+    display: none;
+  }
+
+  .stat {
+    flex: 1 1 0;
+
+    /* min-width:auto would let the longest label set the floor and
+       push the fourth tile off-screen. */
+    min-width: 0;
+
+    padding: 7px 8px 7px 10px;
+
+    border-radius: 10px;
+
+    overflow: hidden;
+  }
+
+  .stat .val {
+    font-size: 17px;
+  }
+
+  .stat .lbl {
+    font-size: 8.5px;
+
+    letter-spacing: .3px;
+
+    gap: 5px;
+
+    margin-top: 4px;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #stats .lbl-full  { display: none; }
+  #stats .lbl-short { display: inline; }
+
+  /* ---------- map fills the rest ---------- */
+
+  #layout {
+    flex: 1;
+    height: auto;
+
+    min-height: 0;
+  }
+
+  #map {
+    height: 100%;
+  }
+
+  #resize-handle,
+  #connector-line,
+  #legend {
+    display: none !important;
+  }
+
+  .leaflet-control-zoom {
+    display: none;
+  }
+
+  /* ---------- layers dialog ---------- */
+
+  #fab-layers {
+    display: flex;
+
+    bottom: calc(env(safe-area-inset-bottom) + 18px);
+  }
+
+  #layer-controls {
+    top: auto;
+    left: auto;
+
+    right: 16px;
+    bottom: calc(env(safe-area-inset-bottom) + 76px);
+
+    width: 208px;
+
+    display: none;
+
+    transform-origin: bottom right;
+
+    animation: pop .16s ease-out;
+  }
+
+  #layer-controls.open {
+    display: block;
+  }
+
+  @keyframes pop {
+    from { opacity: 0; transform: scale(.94) translateY(6px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  #layer-controls .mobile-only {
+    display: block;
+  }
+
+  #layer-controls .legend-row {
+    display: flex;
+    align-items: center;
+
+    gap: 8px;
+
+    font-size: 11.5px;
+    color: #ddd8e7;
+
+    margin: 7px 0;
+  }
+
+  /* ---------- sheet ---------- */
+
+  #sheet-backdrop {
+    display: block;
+  }
+
+  #sheet-grabber {
+    display: block;
+  }
+
   #feed {
-    width: 360px;
+    position: fixed;
+
+    left: 0;
+    right: 0;
+    top: 0;
+
+    width: auto;
+    height: 100dvh;
+
+    z-index: 1400;
+
+    border-left: none;
+    border-top: 1px solid var(--border2);
+
+    border-radius: var(--r-xl) var(--r-xl) 0 0;
+
+    background: linear-gradient(180deg, #0c0a17 0%, #08070e 46%);
+
+    box-shadow: 0 -22px 60px rgba(0,0,0,.6);
+
+    transform: translate3d(0, var(--sheet-y, 100%), 0);
+
+    transition: transform .36s cubic-bezier(.22,1,.36,1);
+
+    will-change: transform;
+  }
+
+  /* While a finger is down the transform follows it frame by frame. */
+  #feed.dragging {
+    transition: none;
+  }
+
+  #feed.mode-list {
+    border-radius: 0;
+  }
+
+  #sheet-close {
+    display: flex;
+  }
+
+  /* Header doubles as a drag surface in list mode. */
+  #feed-header {
+    padding: 12px 16px 10px;
+
+    touch-action: none;
+  }
+
+  /* The sheet covers the corner the layers button lives in. */
+  body.sheet-open #fab-layers {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  #fab-layers {
+    transition: opacity .2s ease;
+  }
+
+  #feed-list {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 28px);
+  }
+
+  #ev-body {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 28px);
+  }
+
+  /* Detail header doubles as a drag surface, so it must not scroll. */
+  #ev-head {
+    padding: 12px 16px 16px;
+
+    touch-action: none;
+  }
+
+  #ev-head .title {
+    font-size: 16px;
+  }
+
+  #ev-controls {
+    flex-wrap: wrap;
+  }
+
+  #ev-close,
+  .map-ctrl-btn {
+    padding: 8px 13px;
+    font-size: 11px;
+  }
+
+  .filter-btn {
+    padding: 9px 14px;
+  }
+
+  #sat-map {
+    height: 210px !important;
   }
 
 }
+
+/* Desktop keeps the long labels and never mounts the sheet chrome. */
+.lbl-short { display: none; }
 
 </style>
 </head>
@@ -1209,16 +1710,15 @@ body {
 
 <div id="topbar">
 
-  <div id="brand">
+  <!--
+    Phone layout puts the identity row on top and the counts on a
+    strip beneath it, so the map keeps the rest of the screen.
+  -->
+  <div id="brand-row">
 
- <!--
-   Inline SVG mark. Previously a stock JPG hotlinked from
-   vecteezy.com -- the same class of external render-path
-   dependency that was blanking the map, plus a licensing
-   question on a stock image. Inline means zero requests and
-   nothing to fail during a live demo.
- -->
-<div id="mark" role="img" aria-label="AntriX logo">
+    <div id="brand">
+
+<div id="mark" role="img" aria-label="SATAT logo">
   <svg viewBox="0 0 40 40" fill="none"
        xmlns="http://www.w3.org/2000/svg">
 
@@ -1251,57 +1751,81 @@ body {
   </svg>
 </div>
 
-    <div>
-      <div id="logo">AntriX</div>
+      <div style="min-width:0;">
+        <div id="logo">SATAT</div>
 
-      <div id="tagline">
-        Industrial Thermal Anomaly Detection
+        <div id="tagline">
+          Industrial Thermal Anomaly Detection
+        </div>
+
+        <!--
+          Which data snapshot this instance is serving. FIRMS is a live
+          feed, so two machines that fetched at different times will show
+          different counts; this makes that visible instead of silent.
+        -->
+        <div id="snapshot-badge">-</div>
       </div>
 
-      <!--
-        Which data snapshot this instance is serving. FIRMS is a live
-        feed, so two machines that fetched at different times will show
-        different counts; this makes that visible instead of silent.
-      -->
-      <div id="snapshot-badge">-</div>
     </div>
+
+    <div id="live-pill">
+      <span class="pulse"></span>
+      FIRMS feed
+    </div>
+
+    <!-- Opens the full-screen report list on phones. -->
+    <button id="nav-toggle"
+            aria-label="Open reported cases">
+
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M2.5 4.5h13M2.5 9h13M2.5 13.5h13"
+              stroke="currentColor" stroke-width="1.7"
+              stroke-linecap="round"/>
+      </svg>
+
+      <span class="badge" id="nav-count">0</span>
+    </button>
 
   </div>
 
   <div id="stats">
 
-    <div class="stat">
+    <div class="stat s-fire">
       <div class="val" id="s-industrial">-</div>
 
       <div class="lbl">
         <span class="dot" style="background:#ff465c;color:#ff465c"></span>
-        Industrial
+        <span class="lbl-full">Industrial</span>
+        <span class="lbl-short">Fire</span>
       </div>
     </div>
 
-    <div class="stat">
+    <div class="stat s-persist">
       <div class="val" id="s-possible">-</div>
 
       <div class="lbl">
         <span class="dot" style="background:#ff9d38;color:#ff9d38"></span>
-        Persistent
+        <span class="lbl-full">Persistent</span>
+        <span class="lbl-short">Persist</span>
       </div>
     </div>
 
-    <div class="stat">
+    <div class="stat s-insuff">
       <div class="val" id="s-other">-</div>
 
       <div class="lbl">
         <span class="dot" style="background:#89869d;color:#89869d"></span>
-        Insufficient Evidence
+        <span class="lbl-full">Insufficient Evidence</span>
+        <span class="lbl-short">Unclear</span>
       </div>
     </div>
 
-    <div class="stat">
+    <div class="stat s-total">
       <div class="val" id="s-total">-</div>
 
       <div class="lbl">
-        Total Detections
+        <span class="lbl-full">Total Detections</span>
+        <span class="lbl-short">Total</span>
       </div>
     </div>
 
@@ -1311,6 +1835,10 @@ body {
 
 
 <div id="connector-line"></div>
+
+
+<!-- Dims the map while the sheet is raised. -->
+<div id="sheet-backdrop"></div>
 
 
 <div id="layout">
@@ -1362,36 +1890,31 @@ body {
 
       </div>
 
-    </div>
+      <!--
+        On phones the standalone legend card would cover the map,
+        so the same key lives inside this dialog instead.
+      -->
+      <div class="mobile-only">
 
+        <div class="title spaced">
+          Classification
+        </div>
 
-    <!--
-      Observation-day window. Populated from the data once it
-      loads; stays hidden if the snapshot only covers one day,
-      since a range control over a single value is noise.
-    -->
-    <div id="time-controls" style="display:none;">
+        <div class="legend-row">
+          <span class="dot" style="background:#ff465c;color:#ff465c"></span>
+          Industrial Fire
+        </div>
 
-      <div class="title">
-        <span>Observation Window</span>
+        <div class="legend-row">
+          <span class="dot" style="background:#ff9d38;color:#ff9d38"></span>
+          Persistent Source
+        </div>
 
-        <button id="tc-reset"
-                onclick="resetDateWindow()">
-          RESET
-        </button>
-      </div>
+        <div class="legend-row">
+          <span class="dot" style="background:#89869d;color:#89869d"></span>
+          Insufficient evidence
+        </div>
 
-      <div id="tc-range">-</div>
-      <div id="tc-count">-</div>
-
-      <div id="tc-sliders">
-        <input type="range" id="tc-start" min="0" max="0" value="0">
-        <input type="range" id="tc-end"   min="0" max="0" value="0">
-      </div>
-
-      <div id="tc-ticks">
-        <span id="tc-first">-</span>
-        <span id="tc-last">-</span>
       </div>
 
     </div>
@@ -1419,6 +1942,22 @@ body {
       </div>
 
     </div>
+
+
+    <!-- Touch-only entry point to the basemap / overlay dialog. -->
+    <button id="fab-layers"
+            aria-label="Map layers">
+
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <path d="M10 2.7 2.8 6.5 10 10.3l7.2-3.8L10 2.7Z"
+              stroke="currentColor" stroke-width="1.5"
+              stroke-linejoin="round"/>
+        <path d="M3.4 10.4 10 13.9l6.6-3.5M3.4 14 10 17.5l6.6-3.5"
+              stroke="currentColor" stroke-width="1.5"
+              stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+
+    </button>
 
   </div>
 
@@ -1451,18 +1990,28 @@ body {
 
   <div id="feed">
 
+    <!-- Drag surface for the sheet on touch layouts. -->
+    <div id="sheet-grabber"><span></span></div>
+
     <div id="list-view"
          style="display:flex;flex-direction:column;height:100%;">
 
       <div id="feed-header">
+
+        <div style="min-width:0;">
 
         <h2>
           Recent FIRMS Detections
         </h2>
 
         <div class="sub" id="feed-sub">
-          Ranked by investigation priority · click any event for evidence
+          Ranked by investigation priority · tap any event for evidence
         </div>
+
+      </div>
+
+      <button id="sheet-close"
+              aria-label="Close list">&times;</button>
 
       </div>
 
@@ -1494,12 +2043,8 @@ body {
 
       <div id="sortrow">
 
-        <span style="
-          font-size:11px;
-          color:#8f89a4;
-          font-weight:600;
-        ">
-          SORT BY
+        <span class="sortrow-label">
+          Sort by
         </span>
 
         <button class="filter-btn sort-btn active"
@@ -1891,172 +2436,42 @@ function rebuildHeat(rows) {
 
 
 /* =========================================================
-   OBSERVATION WINDOW
+   VISIBLE ROWS
 
-   allData holds every day in the snapshot at once. These
-   helpers narrow it to a contiguous run of acquisition dates
-   that the map, the density layer and the feed all read from,
-   so the three can never show different days.
+   Single source of truth for "what is currently on screen".
+   The snapshot is a short fixed window (see README), so every
+   surface -- map, density layer, feed, header counts -- reads
+   the same full row set. Date scrubbing was removed; when the
+   feed becomes live this is the one place that needs to learn
+   about a window again.
 ========================================================= */
 
-let dateList     = [];
-let dateStartIdx = 0;
-let dateEndIdx   = 0;
-
-
 function visibleData() {
-
-  if (!dateList.length)
-    return allData.slice();
-
-
-  const from = dateList[dateStartIdx];
-  const to   = dateList[dateEndIdx];
-
-
-  /* ISO dates compare correctly as strings. */
-  return allData.filter(
-    d =>
-      d.acq_date >= from &&
-      d.acq_date <= to
-  );
-
+  return allData.slice();
 }
 
 
-function initDateWindow() {
-
-  dateList =
-    [...new Set(
-      allData
-        .map(d => d.acq_date)
-        .filter(Boolean)
-    )].sort();
-
-
-  /* A range control over one value is just clutter. */
-  if (dateList.length < 2)
-    return;
-
-
-  dateStartIdx = 0;
-  dateEndIdx   = dateList.length - 1;
-
-
-  const start = document.getElementById('tc-start');
-  const end   = document.getElementById('tc-end');
-
-
-  [start, end].forEach(el => {
-    el.min = 0;
-    el.max = dateList.length - 1;
-  });
-
-
-  start.value = dateStartIdx;
-  end.value   = dateEndIdx;
-
-
-  document.getElementById('tc-first').textContent =
-    dateList[0];
-
-  document.getElementById('tc-last').textContent =
-    dateList[dateList.length - 1];
-
-
-  start.addEventListener('input', onDateInput);
-  end.addEventListener('input', onDateInput);
-
-
-  document.getElementById('time-controls')
-    .style.display = 'block';
-
-
-  updateDateLabel();
-
-}
-
-
-function onDateInput() {
-
-  const start = document.getElementById('tc-start');
-  const end   = document.getElementById('tc-end');
-
-
-  let a = Number(start.value);
-  let b = Number(end.value);
-
-
-  /*
-    Two independent handles can cross. Clamp rather than swap,
-    so the handle being dragged stays under the cursor.
-  */
-  if (a > b) {
-
-    if (document.activeElement === start)
-      b = a;
-    else
-      a = b;
-
-    start.value = a;
-    end.value   = b;
-
-  }
-
-
-  dateStartIdx = a;
-  dateEndIdx   = b;
-
-
-  applyDateWindow();
-
-}
-
-
-function resetDateWindow() {
-
-  if (dateList.length < 2)
-    return;
-
-
-  dateStartIdx = 0;
-  dateEndIdx   = dateList.length - 1;
-
-
-  document.getElementById('tc-start').value = dateStartIdx;
-  document.getElementById('tc-end').value   = dateEndIdx;
-
-
-  applyDateWindow();
-
-}
-
-
-function applyDateWindow() {
+/*
+  Re-render every surface from the current row set.
+*/
+function refreshAll() {
 
   const rows = visibleData();
-
 
   renderMarkers(rows);
   rebuildHeat(rows);
   updateStatsFromRows(rows);
 
-
-  /* Keep whatever classification filter is currently selected. */
   const activeFilter =
     document.querySelector(
       '.filter-btn.active:not(.sort-btn)'
     );
-
 
   renderFeed(
     activeFilter
       ? activeFilter.dataset.f
       : 'all'
   );
-
-
-  updateDateLabel();
 
 }
 
@@ -2087,34 +2502,6 @@ function updateStatsFromRows(rows) {
 
   document.getElementById('s-total').textContent =
     rows.length;
-
-}
-
-
-function updateDateLabel() {
-
-  if (!dateList.length)
-    return;
-
-
-  const from = dateList[dateStartIdx];
-  const to   = dateList[dateEndIdx];
-
-
-  const count = visibleData().length;
-
-  const days = dateEndIdx - dateStartIdx + 1;
-
-
-  document.getElementById('tc-range').textContent =
-    from === to
-      ? from
-      : from + ' → ' + to;
-
-
-  document.getElementById('tc-count').textContent =
-    count + ' detections · ' +
-    days + (days === 1 ? ' day' : ' days');
 
 }
 
@@ -2844,40 +3231,55 @@ function openPanel(d) {
   ).style.display = 'flex';
 
 
-  const currentZoom =
-    map.getZoom();
+  if (window.SheetUI && SheetUI.isMobile()) {
 
-  const currentBounds =
-    map.getBounds().pad(-.2);
+    /*
+      Phones get the opposite behaviour from desktop: the point of
+      opening an event there IS to go look at it, and the sheet
+      covers the lower half, so the map zooms in and offsets the
+      detection into the visible upper band.
+    */
+    SheetUI.focusDetection(d);
+    SheetUI.openDetail();
 
-  const markerLatLng =
-    L.latLng(
-      d.latitude,
-      d.longitude
-    );
+  } else {
 
-  if (
-    !currentBounds.contains(
-      markerLatLng
-    )
-  ) {
+    const currentZoom =
+      map.getZoom();
 
-    map.panTo(
-      [
+    const currentBounds =
+      map.getBounds().pad(-.2);
+
+    const markerLatLng =
+      L.latLng(
         d.latitude,
         d.longitude
-      ],
-      {
-        duration:.5
-      }
+      );
+
+    if (
+      !currentBounds.contains(
+        markerLatLng
+      )
+    ) {
+
+      map.panTo(
+        [
+          d.latitude,
+          d.longitude
+        ],
+        {
+          duration:.5
+        }
+      );
+
+    }
+
+    console.assert(
+      map.getZoom() === currentZoom,
+      'Zoom level must not change'
     );
 
   }
-
-  console.assert(
-    map.getZoom() === currentZoom,
-    'Zoom level must not change'
-  );
 
 
   const head =
@@ -3627,11 +4029,14 @@ function closePanel() {
 
   document.getElementById(
     'list-view'
-  ).style.display = 'block';
+  ).style.display = 'flex';
 
   document.getElementById(
     'connector-line'
   ).style.display = 'none';
+
+  if (window.SheetUI && SheetUI.isMobile())
+    SheetUI.openList();
 
 }
 
@@ -3672,6 +4077,13 @@ function renderFeed(filter) {
       : 'fusion_score';
 
 
+  const navCount =
+    document.getElementById('nav-count');
+
+  if (navCount)
+    navCount.textContent = filtered.length;
+
+
   filtered
     .sort(
       (a,b) =>
@@ -3698,114 +4110,50 @@ function renderFeed(filter) {
         );
 
 
-      const riskBadge = `
-
-        <span style="
-          font-size:10px;
-          font-weight:700;
-
-          padding:2px 7px;
-
-          border-radius:10px;
-
-          color:#fff;
-
-          background:
-            ${riskColors[tier]};
-
-          margin-right:6px;
-        ">
-
-          ${tier.toUpperCase()}
-          PRIORITY
-
-        </span>
-
-      `;
-
-
+      /*
+        Two numbers, two meanings: Priority answers "look at this
+        first?", Fusion answers "is this industrial?". They are
+        given equal weight in the card so neither is mistaken for
+        the other.
+      */
       item.innerHTML = `
 
         <div class="row1">
 
-          <span>
+          <span class="pill"
+                style="background:${riskColors[tier]}">
+            ${tier.toUpperCase()}
+          </span>
 
-            ${riskBadge}
-
-            <span class="label">
-
-              ${labelNames[
-                d.final_label
-              ]}
-
-            </span>
-
+          <span class="label">
+            ${labelNames[d.final_label]}
           </span>
 
         </div>
 
 
-        <div style="
-          display:flex;
-          gap:14px;
-          margin-top:6px;
-        ">
+        <div class="scores">
 
-          <span style="
-            font-family:'JetBrains Mono';
-            font-size:12px;
-          ">
+          <div class="chip">
+            <div class="k">Priority</div>
+            <div class="v">${d.risk_score.toFixed(2)}</div>
+          </div>
 
-            <b>Priority</b>
-            ${d.risk_score.toFixed(2)}
-
-          </span>
-
-
-          <span style="
-            font-family:'JetBrains Mono';
-            font-size:12px;
-            color:#8f89a4;
-          ">
-
-            <b style="color:#8f89a4">
-              Fusion
-            </b>
-
-            ${d.fusion_score.toFixed(2)}
-
-          </span>
-
-        </div>
-
-
-        <div style="
-          font-size:10px;
-          color:#777183;
-          margin-top:2px;
-        ">
-
-          Priority = investigate first?
-          · Fusion = industrial evidence?
+          <div class="chip">
+            <div class="k">Fusion</div>
+            <div class="v">${d.fusion_score.toFixed(2)}</div>
+          </div>
 
         </div>
 
 
         <div class="meta">
 
-          <b>
-            ${d.dist_to_industrial_km.toFixed(1)}
-            km
-          </b>
-
-          from facility · recurrence
-
-          <b>
-            ${d.recurrence_days}d
-          </b>
-
-          · FRP ${d.frp}
-          · ${d.acq_date}
+          <b>${d.dist_to_industrial_km.toFixed(1)} km</b>
+          from facility ·
+          recurrence <b>${d.recurrence_days}d</b> ·
+          FRP <b>${d.frp}</b> ·
+          <b>${d.acq_date}</b>
 
         </div>
 
@@ -4369,9 +4717,6 @@ Promise.all([
       clusters;
 
 
-    initDateWindow();
-
-
     const rows = visibleData();
 
     renderMarkers(rows);
@@ -4387,9 +4732,9 @@ Promise.all([
 /* =========================================================
    MARKERS
 
-   Re-runnable: the observation-window slider calls this again
-   with a narrower row set, so it has to clear the previous
-   dots and drop stale references rather than append.
+   Re-runnable: refreshAll() calls this again with a new row
+   set, so it has to clear the previous dots and drop stale
+   references rather than append.
 ========================================================= */
 
 function renderMarkers(rows) {
@@ -4448,8 +4793,18 @@ function renderMarkers(rows) {
           4.5
         );
 
+      /*
+        A 6px dot is a comfortable mouse target and a miserable
+        thumb target, so coarse pointers get a larger dot as well
+        as the tap-to-nearest fallback in the sheet controller.
+      */
+      const touchBoost =
+        window.matchMedia('(pointer: coarse)').matches
+          ? 2.5
+          : 0;
+
       const baseRadius =
-        categoryRadius + frpBoost;
+        categoryRadius + frpBoost + touchBoost;
 
 
       /*
@@ -4654,6 +5009,655 @@ function selectDetection(i) {
   );
 
 }
+
+
+
+/* =========================================================
+   SHEET UI  (touch layouts)
+
+   Owns everything that differs on a phone:
+
+     - the feed as a draggable bottom sheet with two snap points
+       (mid / full) plus dismiss, instead of a fixed side column
+     - the header button that raises the full-screen case list
+     - tap-anywhere-near-a-dot selection, because a 6px circle is
+       not a thumb target
+     - the floating layers dialog
+
+   Desktop code paths are untouched: every entry point no-ops
+   unless the media query matches.
+========================================================= */
+
+window.SheetUI = (function() {
+
+  const MQ =
+    window.matchMedia(
+      '(max-width: 900px), (pointer: coarse) and (max-width: 1100px)'
+    );
+
+  const feed      = document.getElementById('feed');
+  const backdrop  = document.getElementById('sheet-backdrop');
+  const grabber   = document.getElementById('sheet-grabber');
+  const navToggle = document.getElementById('nav-toggle');
+  const closeBtn  = document.getElementById('sheet-close');
+  const fab       = document.getElementById('fab-layers');
+  const layers    = document.getElementById('layer-controls');
+  const listView  = document.getElementById('list-view');
+  const detailView= document.getElementById('detail-view');
+  const evHead    = document.getElementById('ev-head');
+  const feedHead  = document.getElementById('feed-header');
+
+
+  /* 'closed' | 'list' | 'detail' */
+  let mode = 'closed';
+
+  let currentY = null;
+
+  let dragging   = false;
+  let startY     = 0;
+  let startPtr   = 0;
+  let lastPtr    = 0;
+  let lastTime   = 0;
+  let velocity   = 0;
+
+  let frame   = null;
+  let pending = null;
+
+  /* Last position the finger asked for. The painted value can lag it
+     by a frame, and the release decision must use the finger. */
+  let latest  = null;
+
+
+  function isMobile() {
+    return MQ.matches;
+  }
+
+
+  function viewportH() {
+    return window.innerHeight;
+  }
+
+
+  /*
+    Snap points as distance from the top of the viewport to the top
+    edge of the sheet. 'full' deliberately stops short of the top so
+    a strip of map stays visible and the sheet still reads as a
+    layer over the map rather than a new page.
+  */
+  function snaps() {
+
+    const h = viewportH();
+
+    const sheetH =
+      feed.offsetHeight || h;
+
+    return {
+      full:   Math.round(h * 0.10),
+      mid:    Math.round(h * 0.52),
+
+      /* Measured, so the sheet is always fully clear of the screen
+         even when innerHeight and 100dvh disagree. */
+      closed: Math.max(h, sheetH) + 2
+    };
+
+  }
+
+
+  /*
+    One transform write per frame. Everything else (opacity, radius)
+    is left alone during the drag so the gesture stays on the
+    compositor and cannot stutter.
+  */
+  function paint(value) {
+
+    pending = value;
+
+    if (frame !== null)
+      return;
+
+    frame = requestAnimationFrame(() => {
+
+      frame = null;
+
+      currentY = pending;
+
+      feed.style.setProperty(
+        '--sheet-y',
+        currentY + 'px'
+      );
+
+    });
+
+  }
+
+
+  function jumpTo(value) {
+
+    if (frame !== null) {
+      cancelAnimationFrame(frame);
+      frame = null;
+    }
+
+    currentY = value;
+
+    feed.style.setProperty(
+      '--sheet-y',
+      value + 'px'
+    );
+
+  }
+
+
+  function animateTo(value, after) {
+
+    feed.classList.remove('dragging');
+
+    /*
+      Transitioning from an unset position would tween out of the CSS
+      default and read as a jump, so the sheet is first parked
+      off-screen and that value is forced through layout before the
+      real target is written.
+    */
+    if (currentY === null) {
+      jumpTo(snaps().closed);
+      void feed.offsetHeight;
+    }
+
+    jumpTo(value);
+
+    if (after)
+      setTimeout(after, 380);
+
+  }
+
+
+  function showBackdrop(on) {
+
+    backdrop.classList.toggle('show', on);
+
+  }
+
+
+  function setMode(next) {
+
+    mode = next;
+
+    feed.classList.toggle('mode-list',   next === 'list');
+    feed.classList.toggle('mode-detail', next === 'detail');
+
+    document.body.classList.toggle(
+      'sheet-open',
+      next !== 'closed'
+    );
+
+    /* Dimming behind a mid-height detail card would hide the very
+       map the card is describing, so only the list dims. */
+    showBackdrop(next === 'list');
+
+  }
+
+
+  function openList() {
+
+    if (!isMobile())
+      return;
+
+    listView.style.display   = 'flex';
+    detailView.style.display = 'none';
+
+    setMode('list');
+
+    animateTo(0);
+
+  }
+
+
+  function openDetail() {
+
+    if (!isMobile())
+      return;
+
+    /*
+      Coming from the full-screen list the sheet must drop to mid,
+      otherwise the map it just flew to stays hidden behind it. Only
+      a sheet already sitting at full height stays there.
+    */
+    const wasFullDetail =
+      mode === 'detail' &&
+      currentY !== null &&
+      currentY <= snaps().full + 4;
+
+    listView.style.display   = 'none';
+    detailView.style.display = 'flex';
+
+    setMode('detail');
+
+    const target =
+      wasFullDetail
+        ? snaps().full
+        : snaps().mid;
+
+    animateTo(
+      target,
+      () => {
+
+        /* The mini map was laid out while the sheet was off-screen. */
+        if (window.satMapInstance)
+          window.satMapInstance.invalidateSize();
+
+      }
+    );
+
+  }
+
+
+  function close() {
+
+    if (!isMobile())
+      return;
+
+    setMode('closed');
+
+    animateTo(
+      snaps().closed,
+      () => {
+
+        listView.style.display   = 'flex';
+        detailView.style.display = 'none';
+
+        clearSelection();
+
+      }
+    );
+
+  }
+
+
+  /*
+    Drop the highlight when the sheet is dismissed -- otherwise a
+    dot stays ringed with no panel explaining why.
+  */
+  function clearSelection() {
+
+    if (
+      window.selectedMarkerIdx !== null &&
+      window.selectedMarkerIdx !== undefined &&
+      window.markerRefs &&
+      window.markerRefs[window.selectedMarkerIdx]
+    ) {
+
+      const prev =
+        window.markerRefs[window.selectedMarkerIdx];
+
+      if (map.hasLayer(prev))
+        prev.setStyle({
+          weight: 1,
+          radius: prev._baseRadius,
+          color: '#fff'
+        });
+
+    }
+
+    if (window.glowMarker) {
+      map.removeLayer(window.glowMarker);
+      window.glowMarker = null;
+    }
+
+    window.selectedMarkerIdx = null;
+
+  }
+
+
+  /*
+    Centre the map on a detection but push it into the upper band,
+    since the sheet is about to cover the lower half of the screen.
+  */
+  function focusDetection(d) {
+
+    if (!isMobile() || !d)
+      return;
+
+    const zoom =
+      Math.max(map.getZoom(), 12);
+
+    const latlng =
+      L.latLng(d.latitude, d.longitude);
+
+    const offset =
+      viewportH() * 0.20;
+
+    const center =
+      map.unproject(
+        map.project(latlng, zoom).add([0, offset]),
+        zoom
+      );
+
+    map.flyTo(center, zoom, { duration: .55 });
+
+  }
+
+
+  /* ---------------------------------------------------------
+     DRAG
+  --------------------------------------------------------- */
+
+  function lowerBound() {
+
+    return mode === 'list'
+      ? 0
+      : snaps().full;
+
+  }
+
+
+  function beginDrag(e) {
+
+    if (!isMobile() || mode === 'closed')
+      return;
+
+    /* Buttons inside the drag surfaces keep working. */
+    if (e.target.closest('button'))
+      return;
+
+    dragging = true;
+
+    startPtr = e.clientY;
+    lastPtr  = e.clientY;
+    lastTime = performance.now();
+    velocity = 0;
+
+    startY =
+      currentY === null
+        ? lowerBound()
+        : currentY;
+
+    feed.classList.add('dragging');
+
+    /* Capture keeps the gesture alive if the finger slides off the
+       handle; not every pointer type allows it, and failing to
+       capture must not abort the drag. */
+    try {
+      if (e.currentTarget.setPointerCapture)
+        e.currentTarget.setPointerCapture(e.pointerId);
+    } catch (err) {}
+
+  }
+
+
+  function moveDrag(e) {
+
+    if (!dragging)
+      return;
+
+    const min = lowerBound();
+    const max = snaps().closed;
+
+    let next = startY + (e.clientY - startPtr);
+
+    /* Resistance past the top stop instead of a hard wall. */
+    if (next < min)
+      next = min - (min - next) * 0.35;
+
+    if (next > max)
+      next = max;
+
+    const now = performance.now();
+
+    velocity =
+      (e.clientY - lastPtr) /
+      Math.max(now - lastTime, 1);
+
+    lastPtr  = e.clientY;
+    lastTime = now;
+
+    latest = next;
+
+    paint(next);
+
+    e.preventDefault();
+
+  }
+
+
+  function endDrag() {
+
+    if (!dragging)
+      return;
+
+    dragging = false;
+
+    const s = snaps();
+
+    const releasedAt =
+      latest !== null
+        ? latest
+        : currentY;
+
+    latest = null;
+
+    /*
+      Project the throw a short distance forward so a flick lands on
+      the snap the user aimed at, not the one they let go over.
+    */
+    const projected =
+      releasedAt +
+      Math.max(Math.min(velocity * 130, 260), -260);
+
+    const candidates =
+      mode === 'list'
+        ? [0, s.closed]
+        : [s.full, s.mid, s.closed];
+
+    let target = candidates[0];
+    let best   = Infinity;
+
+    candidates.forEach(c => {
+
+      const dist = Math.abs(projected - c);
+
+      if (dist < best) {
+        best   = dist;
+        target = c;
+      }
+
+    });
+
+    if (target === s.closed) {
+      close();
+      return;
+    }
+
+    animateTo(target);
+
+  }
+
+
+  function bindDrag(el) {
+
+    if (!el)
+      return;
+
+    el.addEventListener('pointerdown', beginDrag);
+    el.addEventListener('pointermove', moveDrag);
+    el.addEventListener('pointerup', endDrag);
+    el.addEventListener('pointercancel', endDrag);
+
+  }
+
+
+  bindDrag(grabber);
+  bindDrag(evHead);
+  bindDrag(feedHead);
+
+
+  /* ---------------------------------------------------------
+     CHROME
+  --------------------------------------------------------- */
+
+  if (navToggle)
+    navToggle.addEventListener('click', openList);
+
+  if (closeBtn)
+    closeBtn.addEventListener('click', close);
+
+
+  function closeLayers() {
+
+    layers.classList.remove('open');
+
+    if (fab)
+      fab.classList.remove('active');
+
+  }
+
+
+  if (fab)
+    fab.addEventListener('click', e => {
+
+      e.stopPropagation();
+
+      const open = !layers.classList.contains('open');
+
+      layers.classList.toggle('open', open);
+      fab.classList.toggle('active', open);
+
+    });
+
+
+  document.addEventListener('click', e => {
+
+    if (!isMobile())
+      return;
+
+    if (
+      layers.contains(e.target) ||
+      (fab && fab.contains(e.target))
+    )
+      return;
+
+    closeLayers();
+
+  });
+
+
+  backdrop.addEventListener('click', close);
+
+
+  /* ---------------------------------------------------------
+     TAP TARGETS
+
+     Fingertips are roughly 9mm wide and the dots are 6-13px, so
+     a tap resolves to the nearest detection within a thumb's
+     radius rather than requiring a direct hit.
+  --------------------------------------------------------- */
+
+  const TAP_RADIUS_PX = 64;
+
+  map.on('click', e => {
+
+    if (!isMobile())
+      return;
+
+    const refs = window.markerRefs || [];
+
+    const point = e.containerPoint;
+
+    let bestIdx  = null;
+    let bestDist = Infinity;
+
+    refs.forEach((marker, i) => {
+
+      if (!marker || !map.hasLayer(marker))
+        return;
+
+      const p =
+        map.latLngToContainerPoint(marker.getLatLng());
+
+      const dist =
+        Math.hypot(p.x - point.x, p.y - point.y);
+
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestIdx  = i;
+      }
+
+    });
+
+    if (bestIdx !== null && bestDist <= TAP_RADIUS_PX)
+      selectDetection(bestIdx);
+
+  });
+
+
+  /* ---------------------------------------------------------
+     BREAKPOINT CHANGES
+  --------------------------------------------------------- */
+
+  function syncToViewport() {
+
+    if (!isMobile()) {
+
+      /* Hand the column layout back its DOM unchanged. */
+      feed.classList.remove('mode-list', 'mode-detail', 'dragging');
+      feed.style.removeProperty('--sheet-y');
+
+      document.body.classList.remove('sheet-open');
+
+      showBackdrop(false);
+      closeLayers();
+
+      currentY = null;
+      mode = 'closed';
+
+      map.invalidateSize();
+
+      return;
+
+    }
+
+    if (mode === 'closed') {
+      jumpTo(snaps().closed);
+      return;
+    }
+
+    jumpTo(
+      mode === 'list'
+        ? 0
+        : Math.min(currentY, snaps().mid)
+    );
+
+  }
+
+
+  MQ.addEventListener
+    ? MQ.addEventListener('change', syncToViewport)
+    : MQ.addListener(syncToViewport);
+
+  window.addEventListener('resize', () => {
+
+    clearTimeout(window._sheetResizeT);
+
+    window._sheetResizeT =
+      setTimeout(syncToViewport, 150);
+
+  });
+
+  window.addEventListener('orientationchange', syncToViewport);
+
+
+  if (isMobile())
+    jumpTo(snaps().closed);
+
+
+  return {
+    isMobile,
+    openList,
+    openDetail,
+    close,
+    focusDetection
+  };
+
+})();
 
 </script>
 

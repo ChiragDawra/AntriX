@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Runs the full AntriX processing pipeline end-to-end and (by default) launches
+Runs the full SATAT processing pipeline end-to-end and (by default) launches
 the web app at the end.
 
 Assumes you've already fetched the raw data yourself:

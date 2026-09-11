@@ -27,7 +27,7 @@ for _, row in df.iterrows():
 
 legend_html = '''
 <div style="position: fixed; bottom: 30px; left: 30px; z-index:9999; background:white; padding:10px; border-radius:5px; box-shadow:0 0 5px gray;">
-<b>AntriX Classification</b><br>
+<b>SATAT Classification</b><br>
 <span style="color:red;">●</span> Industrial<br>
 <span style="color:orange;">●</span> Possible Industrial<br>
 <span style="color:gray;">●</span> Other/Unclassified

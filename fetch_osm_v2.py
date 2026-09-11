@@ -2,7 +2,7 @@ import requests
 import json
 
 overpass_url = "https://overpass-api.de/api/interpreter"
-headers = {"User-Agent": "AntriX-Project/1.0"}
+headers = {"User-Agent": "SATAT-Project/1.0"}
 
 regions = {
     "gujarat": "20.5,69.5,23.5,73.5",
