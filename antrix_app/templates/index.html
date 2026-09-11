@@ -2,6 +2,18 @@
 <html>
 <head>
 <meta charset="UTF-8">
+
+<!--
+  Without this a phone assumes a ~980px desktop viewport and scales the
+  rendered page down to fit, which turns the whole dashboard into a
+  pinch-zoomable image: 7px header text, quarter-size tap targets, and
+  pinch gestures zooming the page instead of the map. viewport-fit=cover
+  is what makes env(safe-area-inset-*) resolve to real values on
+  notched devices.
+-->
+<meta name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover">
+
 <title>SATAT — Industrial Thermal Anomaly Detection</title>
 
 <link rel="stylesheet"
@@ -82,6 +94,10 @@ html,
 body {
   width: 100%;
   height: 100%;
+
+  /* iOS grows text in narrow columns otherwise. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
@@ -1406,11 +1422,25 @@ body {
 
   opacity: 0;
 
-  transition: opacity .28s ease;
+  /*
+    The element stays mounted so its opacity can transition, which
+    means an invisible full-screen div sits over the entire app
+    whenever the sheet is down. Without this it swallows every tap
+    on the header, the map and the layers button.
+  */
+  pointer-events: none;
+  visibility: hidden;
+
+  transition: opacity .28s ease, visibility 0s linear .28s;
 }
 
 #sheet-backdrop.show {
   opacity: 1;
+
+  pointer-events: auto;
+  visibility: visible;
+
+  transition: opacity .28s ease, visibility 0s;
 }
 
 @media (max-width: 900px), (pointer: coarse) and (max-width: 1100px) {
@@ -1607,6 +1637,8 @@ body {
     top: 0;
 
     width: auto;
+
+    height: 100vh;
     height: 100dvh;
 
     z-index: 1400;
