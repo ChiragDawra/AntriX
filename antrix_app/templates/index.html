@@ -2729,7 +2729,9 @@ fetch('/api/stats')
     'snapshot ' +
     (s.snapshot_id || 'unknown') +
     ' · ' +
-    range;
+    range +
+    ' · build ' +
+    (s.build || 'unknown');
 
 });
 

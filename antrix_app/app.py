@@ -7,6 +7,14 @@ app = Flask(__name__)
 
 SNAPSHOT_FILE = os.path.join(os.path.dirname(__file__), "data_snapshot.json")
 
+# Which commit this instance is actually running. Render sets
+# RENDER_GIT_COMMIT automatically. Without this there is no way to tell a
+# deployed fix from a deploy that silently never happened -- which is
+# exactly what went wrong once: the fix was pushed, the service kept
+# serving the previous build, and the only way to notice was diffing the
+# served HTML byte for byte.
+BUILD_COMMIT = (os.environ.get("RENDER_GIT_COMMIT") or "local")[:7]
+
 
 def load_snapshot():
     """Provenance for the data this instance is serving (written by run_pipeline.py)."""
@@ -52,6 +60,7 @@ def stats():
         "snapshot_id": snapshot.get("snapshot_id"),
         "generated_at": snapshot.get("generated_at"),
         "date_range": snapshot.get("date_range"),
+        "build": BUILD_COMMIT,
     })
 
 if __name__ == "__main__":
