@@ -1,9 +1,24 @@
 {
-  "snapshot_id": "8ce6bc47",
-  "generated_at": "2026-08-29 16:40 UTC",
-  "total_detections": 432,
+  "snapshot_id": "cf8ae866",
+  "generated_at": "2026-09-26 14:38 UTC",
+  "total_detections": 624,
   "date_range": [
-    "2026-08-25",
-    "2026-08-29"
-  ]
+    "2026-09-22",
+    "2026-09-26"
+  ],
+  "method_version": "3.0",
+  "registry": {
+    "osm": 16299,
+    "wri": 1589,
+    "gem": 2272,
+    "eog": 0
+  },
+  "model": {
+    "trained": true,
+    "n_positive": 53,
+    "n_negative": 294,
+    "cv_auc": 0.8436015915800282,
+    "cv_folds": 5
+  },
+  "retrieval_success_rate": 0.4567
 }

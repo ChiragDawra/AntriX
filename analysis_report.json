@@ -1,0 +1,41 @@
+{
+  "method_version": "3.0",
+  "input_rows": 624,
+  "registry": {
+    "osm": 16299,
+    "wri": 1589,
+    "gem": 2272,
+    "eog": 0
+  },
+  "model": {
+    "trained": true,
+    "n_positive": 53,
+    "n_negative": 294,
+    "cv_auc": 0.8436015915800282,
+    "cv_folds": 5,
+    "feature_importance": {
+      "frp": 0.178,
+      "frp_robust_z": 0.1508,
+      "est_temp_k_filled": 0.0842,
+      "hot_fraction_log": 0.0529,
+      "recurrence_days": 0.0726,
+      "night_fraction": 0.3572,
+      "duty_cycle": 0.0602,
+      "frp_shift": 0.0442
+    },
+    "model_path": "/Users/chiragdawra/Desktop/HackSpace/AntriX/satat_model_v3.pkl"
+  },
+  "retrieval_success_rate": 0.4567,
+  "label_counts": {
+    "insufficient_evidence": 536,
+    "industrial_fire": 63,
+    "persistent_industrial_source": 25
+  },
+  "temp_class_counts": {
+    "unknown": 339,
+    "biomass_like": 149,
+    "smouldering": 133,
+    "mixed": 3
+  },
+  "multi_source_confirmed": 90
+}

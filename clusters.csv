@@ -1,72 +1,97 @@
-cluster_id,count,centroid_lat,centroid_lon,first_date,last_date,persistence_days,max_frp,avg_frp,max_priority,max_fusion,dominant_label,industrial_context,nearest_facility_name,nearest_facility_type,dist_to_industrial_km
-C29,2,10.214125,79.243405,2026-08-25,2026-08-25,1,4.51,4.0,0.32,0.13,insufficient_evidence,No nearby industrial zone,TNSTC Bus Depot,Industrial area,273.01
-C22,3,15.110999999999999,76.80565333333332,2026-08-25,2026-08-28,4,2.57,1.83,0.33,0.22,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,326.55
-C1,24,15.177132499999999,76.66680166666667,2026-08-25,2026-08-28,4,5.52,2.45,0.56,0.35,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,341.85
-C11,5,15.336392,76.28196,2026-08-25,2026-08-28,4,3.12,1.7,0.49,0.33,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,388.66
-C6,7,17.95657857142857,80.79530571428572,2026-08-25,2026-08-28,4,4.11,2.95,0.55,0.31,insufficient_evidence,No nearby industrial zone,Upper Sileru Power House,Thermal power plant,129.54
-C30,2,19.820945000000002,79.23766,2026-08-25,2026-08-28,4,0.86,0.8,0.19,0.2,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,233.25
-C23,3,20.910796666666666,71.45964666666667,2026-08-25,2026-08-28,4,2.89,1.57,0.53,0.88,persistent_industrial_source,Within known industrial zone,Unnamed industrial facility,Industrial area,0.26
-C2,12,21.10498583333333,72.64180916666668,2026-08-25,2026-08-28,4,11.92,5.63,0.75,0.97,persistent_industrial_source,Within known industrial zone,ArcelorMittal Nippon Steel India,Industrial works,1.22
-C31,2,21.196175,81.41427999999999,2026-08-25,2026-08-25,1,2.93,2.93,0.26,0.36,industrial_fire,Within known industrial zone,Bhilai 500 MW Expansion Power Project,Thermal power plant,1.17
-C3,12,21.748594999999998,83.84374916666667,2026-08-25,2026-08-28,4,18.05,7.04,0.74,0.36,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,18.1
-C32,2,21.813005,83.89579,2026-08-25,2026-08-25,1,0.53,0.46,0.08,0.03,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,9.82
-C33,2,22.246545,87.38782,2026-08-25,2026-08-27,3,1.81,1.26,0.32,0.22,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,95.98
-C34,2,22.340585,69.85508,2026-08-25,2026-08-25,1,3.06,2.62,0.26,0.38,industrial_fire,Within known industrial zone,Unnamed industrial facility,Industrial area,0.53
-C4,11,22.3689,87.28859272727273,2026-08-25,2026-08-29,5,10.47,3.59,0.73,0.33,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,80.47
-C35,2,22.36357,87.0176,2026-08-25,2026-08-28,4,4.8,2.65,0.53,0.25,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,55.84
-C36,2,22.415765,69.03883,2026-08-25,2026-08-26,2,2.63,2.01,0.35,0.2,insufficient_evidence,No nearby industrial zone,Port,Industrial area,58.79
-C16,4,22.78959,86.20255499999999,2026-08-25,2026-08-27,3,3.24,1.71,0.4,0.8,industrial_fire,Within known industrial zone,Tata Steel,Industrial area,0.52
-C37,2,22.80032,86.091025,2026-08-25,2026-08-27,3,2.85,2.79,0.32,0.78,industrial_fire,Within known industrial zone,Adityapur Works Power Station,Thermal power plant,0.45
-C24,3,22.92569333333333,69.82334999999999,2026-08-25,2026-08-26,2,2.03,1.49,0.35,0.88,industrial_fire,Within known industrial zone,Unnamed industrial facility,Industrial area,0.15
-C38,2,22.928555,70.10682,2026-08-25,2026-08-28,4,4.39,2.74,0.48,0.8,industrial_fire,Within known industrial zone,Tuna-Tekra Container Terminal,Industrial area,1.15
-C7,6,23.556321666666665,87.24068833333335,2026-08-25,2026-08-29,5,2.57,1.44,0.45,0.33,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial works,33.4
-C39,2,23.66355,87.15572,2026-08-25,2026-08-27,3,2.08,2.0,0.28,0.21,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,20.74
-C12,5,25.942991999999997,72.190302,2026-08-25,2026-08-28,4,21.83,13.63,0.62,0.36,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,272.27
-C40,2,26.760505000000002,83.198765,2026-08-25,2026-08-26,2,1.23,1.08,0.23,0.26,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,346.33
-C17,4,29.4657025,76.86996249999999,2026-08-25,2026-08-27,3,7.66,4.2,0.37,0.01,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,54.67
-C41,2,9.80394,78.17557500000001,2026-08-26,2026-08-26,1,4.38,4.19,0.32,0.0,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,360.87
-C42,2,9.91994,78.077425,2026-08-26,2026-08-28,3,5.83,5.62,0.35,0.0,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,356.28
-C18,4,11.180825,79.0977075,2026-08-26,2026-08-28,3,2.46,1.16,0.55,0.33,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,177.8
-C8,6,11.814348333333333,77.91840833333333,2026-08-26,2026-08-28,3,2.88,1.65,0.46,0.37,insufficient_evidence,No nearby industrial zone,"SIPCOT Mamandur, Cheyyar",Industrial area,214.01
-C19,4,13.7123575,79.62086249999999,2026-08-26,2026-08-28,3,2.67,1.62,0.45,0.93,persistent_industrial_source,Within known industrial zone,Unnamed industrial facility,Industrial area,1.31
-C13,5,13.830342000000002,79.257716,2026-08-26,2026-08-28,3,15.31,3.82,0.6,0.25,insufficient_evidence,No nearby industrial zone,Amararaja Batteries Small Batteries Division,Industrial works,30.41
-C43,2,15.02354,79.75197499999999,2026-08-26,2026-08-28,3,5.67,4.09,0.34,0.0,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,118.03
-C44,2,15.023245,78.01422500000001,2026-08-26,2026-08-27,2,2.22,1.67,0.33,0.21,insufficient_evidence,No nearby industrial zone,"APSRTC Bus Depot , Venkatagiri",Industrial area,208.03
-C45,2,15.168465000000001,76.381415,2026-08-26,2026-08-27,2,1.39,1.3,0.23,0.22,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,370.97
-C46,2,15.17339,76.78565499999999,2026-08-26,2026-08-28,3,1.18,1.0,0.23,0.2,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,331.56
-C14,5,15.175658000000002,77.101362,2026-08-26,2026-08-28,3,1.81,1.25,0.34,0.31,insufficient_evidence,No nearby industrial zone,"APSRTC Bus Depot , Venkatagiri",Industrial area,300.97
-C47,2,15.33378,76.24683999999999,2026-08-26,2026-08-27,2,0.78,0.72,0.18,0.2,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,391.47
-C25,3,15.988080000000002,78.40330999999999,2026-08-26,2026-08-28,3,2.89,2.39,0.34,0.22,insufficient_evidence,No nearby industrial zone,"APSRTC Bus Depot , Venkatagiri",Industrial area,261.29
-C26,3,18.68424333333333,73.03322333333334,2026-08-26,2026-08-26,1,2.8,2.02,0.25,0.36,industrial_fire,Within known industrial zone,JSW Ispat Steel Plant,Industrial area,1.14
-C48,2,20.763295,85.294795,2026-08-26,2026-08-26,1,2.11,1.98,0.21,0.2,industrial_fire,Adjacent to industrial zone,Unnamed industrial facility,Thermal power plant,4.78
-C5,8,20.79500125,85.25666125000001,2026-08-26,2026-08-27,2,11.97,2.96,0.57,0.78,industrial_fire,Within known industrial zone,Tata Steel Meramandali,Industrial area,1.36
-C15,5,20.869152,84.989822,2026-08-26,2026-08-27,2,5.94,3.43,0.45,0.77,industrial_fire,Within known industrial zone,Angul Steel Plant,Industrial area,1.31
-C49,2,20.964135,86.01119,2026-08-26,2026-08-28,3,4.14,3.68,0.31,0.38,industrial_fire,Within known industrial zone,TATA Steel,Industrial area,0.91
-C9,6,20.966708333333333,85.179385,2026-08-26,2026-08-27,2,9.71,7.16,0.38,0.2,industrial_fire,Adjacent to industrial zone,Unnamed industrial facility,Industrial area,2.69
-C50,2,22.358269999999997,82.304235,2026-08-26,2026-08-26,1,8.21,6.7,0.37,0.05,insufficient_evidence,No nearby industrial zone,Bhandhakhar Power Station,Thermal power plant,13.61
-C51,2,23.11914,70.083315,2026-08-26,2026-08-27,2,1.73,1.6,0.26,0.83,industrial_fire,Within known industrial zone,Unnamed industrial facility,Industrial area,0.8
-C52,2,23.315655,70.48671,2026-08-26,2026-08-26,1,1.62,1.42,0.17,0.37,industrial_fire,Within known industrial zone,Unnamed industrial facility,Industrial area,0.35
-C53,2,23.61623,86.79031,2026-08-26,2026-08-26,1,3.56,2.73,0.29,0.15,industrial_fire,Adjacent to industrial zone,Unnamed industrial facility,Industrial area,4.87
-C10,6,29.914025,74.95236166666668,2026-08-26,2026-08-27,2,34.97,16.79,0.6,0.27,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,191.24
-C54,2,8.30631,77.63922500000001,2026-08-27,2026-08-27,1,2.34,1.84,0.22,0.03,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,535.48
-C55,2,8.537365000000001,77.95384,2026-08-27,2026-08-27,1,2.88,2.88,0.25,0.01,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,497.35
-C56,2,9.130395,77.84409500000001,2026-08-27,2026-08-27,1,4.92,4.6,0.33,0.0,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,444.07
-C57,2,9.304715,78.814625,2026-08-27,2026-08-27,1,6.54,3.76,0.36,0.0,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,383.51
-C58,2,9.499775,77.6156,2026-08-27,2026-08-29,3,4.45,2.88,0.32,0.01,insufficient_evidence,No nearby industrial zone,"SIPCOT Mamandur, Cheyyar",Industrial area,421.77
-C27,3,10.608833333333333,77.42443666666668,2026-08-27,2026-08-28,2,0.58,0.46,0.18,0.22,insufficient_evidence,No nearby industrial zone,"SIPCOT Mamandur, Cheyyar",Industrial area,337.58
-C59,2,15.844825,79.77468999999999,2026-08-27,2026-08-27,1,3.7,2.45,0.29,0.03,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,209.26
-C60,2,17.062725,76.97904,2026-08-27,2026-08-28,2,1.5,1.4,0.24,0.22,insufficient_evidence,No nearby industrial zone,Pawana Hydroelectric Power Station,Thermal power plant,410.17
-C28,3,17.14149666666667,77.18103666666667,2026-08-27,2026-08-28,2,1.4,1.1,0.27,0.23,insufficient_evidence,No nearby industrial zone,Pawana Hydroelectric Power Station,Thermal power plant,426.25
-C61,2,17.463675000000002,80.65307,2026-08-27,2026-08-28,2,2.91,2.72,0.33,0.21,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,152.48
-C62,2,23.68668,87.12185,2026-08-27,2026-08-29,3,3.21,1.81,0.47,0.21,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,16.67
-C63,2,26.632735,70.38699,2026-08-27,2026-08-27,1,6.8,5.08,0.36,0.0,insufficient_evidence,No nearby industrial zone,Adhoi (Pasakayara),Thermal power plant,362.11
-C20,4,8.710495,77.97427,2026-08-28,2026-08-28,1,19.0,9.14,0.39,0.05,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,478.94
-C64,2,8.737755,78.096025,2026-08-28,2026-08-29,2,9.62,6.15,0.37,0.01,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,471.0
-C21,4,9.286605,78.39562000000001,2026-08-28,2026-08-28,1,7.43,4.97,0.37,0.01,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,402.1
-C65,2,9.331050000000001,77.5255,2026-08-28,2026-08-28,1,4.97,3.34,0.33,0.0,insufficient_evidence,No nearby industrial zone,"SIPCOT Mamandur, Cheyyar",Industrial area,443.09
-C66,2,11.97412,79.74443,2026-08-28,2026-08-28,1,3.39,3.04,0.28,0.02,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,70.3
-C67,2,14.660585000000001,75.654855,2026-08-28,2026-08-28,1,12.84,12.84,0.39,0.03,insufficient_evidence,No nearby industrial zone,Amararaja Batteries Small Batteries Division,Industrial works,429.09
-C68,2,16.133325,77.827395,2026-08-28,2026-08-28,1,10.46,8.41,0.38,0.03,insufficient_evidence,No nearby industrial zone,"APSRTC Bus Depot , Venkatagiri",Industrial area,308.26
-C69,2,25.035785,87.3886,2026-08-28,2026-08-29,2,3.58,3.3,0.37,0.21,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,81.47
-C70,2,8.606795,77.96981,2026-08-29,2026-08-29,1,3.44,3.07,0.28,0.0,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Thermal power plant,489.57
-C71,2,15.467225,80.16393,2026-08-29,2026-08-29,1,5.8,5.8,0.35,0.01,insufficient_evidence,No nearby industrial zone,Unnamed industrial facility,Industrial area,169.08
+cluster_id,count,centroid_lat,centroid_lon,first_date,last_date,persistence_days,max_frp,avg_frp,max_priority,max_fusion,dominant_label,dominant_temp_class,max_est_temp_k,sources_confirming,sources_confirming_count,new_source,industrial_context,nearest_facility_name,nearest_facility_type,facility_uid,dist_to_industrial_km
+C1,27,21.10484,72.64001,2026-09-22,2026-09-26,5,26.55,9.37,0.905,0.808,persistent_industrial_source,biomass_like,772.8,gem|osm|wri,3,False,On a registered industrial site,ArcelorMittal Nippon Steel Hazira Plant,steel,F00071,0.62
+C11,6,22.93395,69.69837,2026-09-22,2026-09-25,4,4.91,2.46,0.786,0.663,industrial_fire,unknown,514.8,osm,1,False,On a registered industrial site,,power_plant,F00687,0.34
+C3,10,18.68658,73.0364,2026-09-23,2026-09-25,3,4.89,2.45,0.78,0.738,industrial_fire,smouldering,453.3,gem|osm|wri,3,True,On a registered industrial site,DOLVI ISPAT,steel,F01539,0.81
+C9,7,15.17725,76.66948,2026-09-25,2026-09-26,2,4.2,1.43,0.739,0.637,industrial_fire,unknown,618.3,gem|wri,2,True,On a registered industrial site,TORANGALLU EXT,power_plant,F03321,0.6
+C17,4,20.90924,71.45902,2026-09-22,2026-09-25,4,2.22,1.32,0.67,0.647,industrial_fire,unknown,424.7,gem|osm|wri,3,False,On a registered industrial site,PIPAVAV CCCP,power_plant,F00130,0.88
+C25,4,18.85807,72.92821,2026-09-23,2026-09-25,3,6.48,3.71,0.634,0.69,persistent_industrial_source,unknown,526.4,osm|wri,2,False,On a registered industrial site,URAN ONGC,power_plant,F01535,0.85
+C39,3,22.36616,73.11697,2026-09-23,2026-09-23,1,8.91,4.48,0.607,0.498,insufficient_evidence,biomass_like,776.5,gem|osm|wri,3,False,Within the site's immediate surroundings,,power_plant,F00696,1.27
+C27,4,23.26174,70.2599,2026-09-23,2026-09-25,3,3.13,1.56,0.588,0.441,insufficient_evidence,biomass_like,627.4,osm,1,False,Within the site's immediate surroundings,,industrial_area,F00807,2.58
+C10,6,22.41357,69.03586,2026-09-22,2026-09-25,4,4.85,2.7,0.585,0.583,industrial_fire,unknown,426.4,,0,False,Near industrial activity,Mithapur Solar Power Plant,power_plant,F02958,4.85
+C72,2,21.76306,84.02095,2026-09-23,2026-09-23,1,11.6,7.84,0.578,0.622,industrial_fire,biomass_like,599.4,gem|osm,2,False,On a registered industrial site,JSW BPSL Odisha steel plant,steel,F01660,0.36
+C28,3,21.1947,81.4089,2026-09-22,2026-09-26,5,13.45,9.87,0.565,0.413,insufficient_evidence,biomass_like,509.7,gem|osm|wri,3,True,Within the site's immediate surroundings,BHILAI TPP,power_plant,F01788,1.13
+C89,2,9.70658,77.67388,2026-09-26,2026-09-26,1,10.28,7.82,0.558,0.272,insufficient_evidence,biomass_like,600.5,,0,True,No registered industrial site nearby,Jambalapuram,power_plant,F02694,16.58
+C8,8,31.88226,74.67798,2026-09-22,2026-09-25,4,9.71,4.37,0.55,0.256,insufficient_evidence,unknown,539.8,,0,True,No registered industrial site nearby,GOINDWAL SAHIB TPP,power_plant,F02591,69.62
+C19,4,23.80278,86.33269,2026-09-22,2026-09-22,1,16.08,9.03,0.546,0.35,insufficient_evidence,biomass_like,664.2,osm,1,False,Near industrial activity,,industrial_area,F01159,3.38
+C2,12,23.7432,86.41136,2026-09-22,2026-09-25,4,14.61,4.03,0.545,0.351,insufficient_evidence,unknown,655.0,osm,1,True,Within the site's immediate surroundings,,industrial_area,F01245,1.85
+C55,2,22.37754,87.27802,2026-09-22,2026-09-25,4,6.39,3.86,0.537,0.454,industrial_fire,biomass_like,781.9,gem,1,False,Within the site's immediate surroundings,Orissa Alloy Steel Kharagpur Plant,steel,F03815,2.16
+C54,2,22.36256,87.01659,2026-09-22,2026-09-25,4,5.71,3.79,0.533,0.513,industrial_fire,smouldering,484.6,gem,1,False,On a registered industrial site,Orissa Steel & Power Jhargram Steel Plant,steel,F03817,0.28
+C68,2,30.60572,76.82405,2026-09-22,2026-09-24,3,15.27,8.95,0.529,0.311,insufficient_evidence,smouldering,499.0,,0,False,No registered industrial site nearby,Khera,power_plant,F02819,23.32
+C46,2,8.67507,77.47452,2026-09-22,2026-09-22,1,14.12,8.52,0.525,0.305,insufficient_evidence,biomass_like,738.6,,0,False,No registered industrial site nearby,PAPANASAM,power_plant,F03064,12.85
+C80,2,30.50034,75.93482,2026-09-23,2026-09-23,1,12.66,10.59,0.523,0.302,insufficient_evidence,unknown,,,0,False,No registered industrial site nearby,Gobindpura power station,power_plant,F03561,28.41
+C53,2,22.04186,83.7304,2026-09-22,2026-09-23,2,7.42,7.06,0.519,0.307,insufficient_evidence,unknown,,,0,False,No registered industrial site nearby,Darlipali power station,power_plant,F03522,18.68
+C18,4,23.77472,86.20309,2026-09-22,2026-09-25,4,6.74,2.84,0.515,0.321,insufficient_evidence,unknown,,osm,1,True,Within the site's immediate surroundings,,industrial_area,F01223,2.15
+C75,2,26.63569,72.26344,2026-09-23,2026-09-23,1,9.69,8.46,0.513,0.286,insufficient_evidence,unknown,,,0,False,No registered industrial site nearby,Godelai Solar Power Plant,power_plant,F02616,27.36
+C24,4,28.74068,76.92762,2026-09-22,2026-09-26,5,3.84,1.68,0.511,0.315,insufficient_evidence,smouldering,437.0,,0,True,Near industrial activity,,industrial_area,F02049,3.84
+C90,2,9.83439,78.91506,2026-09-26,2026-09-26,1,7.99,6.25,0.501,0.185,insufficient_evidence,smouldering,487.4,,0,True,No registered industrial site nearby,Uppur power station,power_plant,F03752,27.95
+C44,3,10.90386,79.74404,2026-09-26,2026-09-26,1,7.68,6.52,0.498,0.211,insufficient_evidence,unknown,,,0,True,Near industrial activity,Nagai Nagapattinam Power Project,power_plant,F03663,8.68
+C69,2,31.69136,75.16492,2026-09-22,2026-09-22,1,10.02,9.61,0.495,0.245,insufficient_evidence,smouldering,463.9,,0,False,No registered industrial site nearby,Beas,power_plant,F02420,23.15
+C21,4,24.82057,73.09343,2026-09-22,2026-09-25,4,2.14,1.64,0.495,0.436,industrial_fire,smouldering,431.0,wri,1,False,On a registered industrial site,BINANI CEMENT PLANT,power_plant,F02383,0.65
+C12,6,26.25779,74.09521,2026-09-22,2026-09-25,4,2.19,1.47,0.486,0.382,insufficient_evidence,unknown,442.7,,0,False,Near industrial activity,RABRIYAWAS CEMENT,power_plant,F03129,5.11
+C29,3,21.7491,83.844,2026-09-22,2026-09-23,2,7.04,4.52,0.483,0.266,insufficient_evidence,biomass_like,735.6,,0,False,Near industrial activity,I.B.VALLEY,power_plant,F02660,6.5
+C14,5,24.6619,74.63276,2026-09-22,2026-09-25,4,2.49,1.92,0.47,0.388,insufficient_evidence,unknown,435.7,,0,False,Near industrial activity,NIMBAHERA JK CEMENT,power_plant,F03006,5.75
+C91,2,10.37542,79.2682,2026-09-26,2026-09-26,1,7.06,4.64,0.461,0.193,insufficient_evidence,biomass_like,714.8,,0,True,No registered industrial site nearby,KOVILKALAPPAL,power_plant,F02756,27.24
+C34,3,26.92676,73.46802,2026-09-22,2026-09-25,4,2.44,1.71,0.459,0.386,insufficient_evidence,unknown,,,0,False,Near industrial activity,Khimsar,power_plant,F02823,8.9
+C65,2,26.63954,79.47703,2026-09-22,2026-09-23,2,5.18,3.4,0.45,0.389,insufficient_evidence,biomass_like,500.3,,0,False,Near industrial activity,AURAIYA GT,power_plant,F02303,5.28
+C6,8,22.32634,69.85866,2026-09-22,2026-09-25,4,3.19,1.65,0.445,0.415,insufficient_evidence,smouldering,444.4,osm,1,True,Within the site's immediate surroundings,Reliance Refinery,refinery,F00069,1.06
+C70,2,8.91962,78.0765,2026-09-23,2026-09-23,1,7.43,5.86,0.442,0.223,insufficient_evidence,unknown,,,0,False,Near industrial activity,Arasadi,power_plant,F02333,4.57
+C88,2,31.77653,74.98471,2026-09-25,2026-09-26,2,6.54,6.3,0.432,0.186,insufficient_evidence,smouldering,451.0,,0,True,No registered industrial site nearby,Beas,power_plant,F02420,41.36
+C74,2,22.91606,69.46399,2026-09-23,2026-09-25,3,7.09,4.91,0.426,0.223,insufficient_evidence,biomass_like,528.0,,0,True,Near industrial activity,Mota Layja power station,power_plant,F03656,9.68
+C4,9,26.87598,73.51565,2026-09-22,2026-09-25,4,2.3,1.71,0.425,0.363,insufficient_evidence,unknown,459.6,,0,False,No registered industrial site nearby,Khimsar,power_plant,F02823,16.09
+C26,4,22.26553,75.13372,2026-09-23,2026-09-24,2,1.79,0.98,0.423,0.327,insufficient_evidence,smouldering,428.8,,0,False,No registered industrial site nearby,KASRAWAD FACTORY,power_plant,F02725,36.25
+C16,5,31.482,75.05608,2026-09-23,2026-09-26,4,3.97,2.43,0.419,0.324,insufficient_evidence,unknown,958.8,,0,True,No registered industrial site nearby,GOINDWAL SAHIB TPP,power_plant,F02591,12.74
+C20,4,24.69152,73.00209,2026-09-22,2026-09-25,4,2.07,1.81,0.419,0.428,industrial_fire,smouldering,442.9,wri,1,False,On a registered industrial site,JAYKAYPURAM PLANT,power_plant,F02684,0.58
+C86,2,28.74729,77.12622,2026-09-25,2026-09-25,1,2.71,2.26,0.409,0.565,industrial_fire,unknown,,gem|osm|wri,3,True,On a registered industrial site,,industrial_area,F02063,0.85
+C71,2,21.67618,84.03979,2026-09-23,2026-09-23,1,4.78,4.33,0.393,0.395,insufficient_evidence,biomass_like,595.6,gem|osm,2,False,On a registered industrial site,Rengali Bhushan power station,steel,F01732,0.39
+C23,4,28.71075,76.84905,2026-09-22,2026-09-25,4,2.17,1.6,0.39,0.377,insufficient_evidence,smouldering,495.2,osm,1,False,Near industrial activity,Ramdas Bhatta,works,F01972,3.27
+C95,2,31.40837,75.02506,2026-09-26,2026-09-26,1,5.59,5.59,0.384,0.174,insufficient_evidence,biomass_like,620.9,,0,True,No registered industrial site nearby,GOINDWAL SAHIB TPP,power_plant,F02591,11.92
+C7,8,31.25625,76.92624,2026-09-22,2026-09-25,4,1.42,0.94,0.376,0.359,insufficient_evidence,unknown,483.9,,0,False,No registered industrial site nearby,KOLDAM,power_plant,F02742,14.64
+C33,3,24.76537,74.60764,2026-09-22,2026-09-24,3,2.7,2.06,0.376,0.603,industrial_fire,smouldering,434.2,gem|wri,2,False,On a registered industrial site,ADITYA CEMENT WORKS,power_plant,F02286,0.1
+C49,2,14.64507,75.64373,2026-09-22,2026-09-22,1,6.37,6.08,0.374,0.182,insufficient_evidence,unknown,,,0,False,No registered industrial site nearby,Karnataka Gupta power station,power_plant,F03610,11.88
+C45,2,8.60519,77.96384,2026-09-22,2026-09-26,5,5.26,3.38,0.37,0.177,insufficient_evidence,unknown,,,0,True,No registered industrial site nearby,Sattankulam power station,power_plant,F03711,17.75
+C22,4,24.9333,74.63236,2026-09-22,2026-09-24,3,1.49,1.17,0.364,0.383,insufficient_evidence,smouldering,452.9,wri,1,False,On a registered industrial site,CHANDERIA CEMENT WORKS,power_plant,F02475,0.55
+C13,5,23.67918,86.39569,2026-09-22,2026-09-25,4,2.35,1.88,0.354,0.36,insufficient_evidence,biomass_like,558.1,osm,1,False,Within the site's immediate surroundings,,industrial_area,F01224,1.97
+C85,2,22.05488,88.12439,2026-09-25,2026-09-25,1,2.66,2.1,0.345,0.429,industrial_fire,unknown,,gem,1,True,Within the site's immediate surroundings,Haldia Energy power station,power_plant,F03574,1.84
+C36,3,27.66793,76.13029,2026-09-22,2026-09-25,4,2.41,2.29,0.341,0.382,insufficient_evidence,unknown,451.9,,0,False,No registered industrial site nearby,Neemrana,power_plant,F03037,38.1
+C82,2,31.41091,75.063,2026-09-24,2026-09-25,2,3.96,3.74,0.337,0.28,insufficient_evidence,biomass_like,642.0,,0,False,Near industrial activity,GOINDWAL SAHIB TPP,power_plant,F02591,8.59
+C42,3,31.80765,74.68184,2026-09-24,2026-09-26,3,4.91,3.52,0.332,0.192,insufficient_evidence,biomass_like,508.1,,0,True,No registered industrial site nearby,GOINDWAL SAHIB TPP,power_plant,F02591,62.62
+C52,2,21.98546,83.23181,2026-09-22,2026-09-23,2,1.42,1.06,0.331,0.592,industrial_fire,unknown,,gem|osm|wri,3,False,On a registered industrial site,RAIGARH TPP,steel,F01787,0.31
+C43,3,15.89546,75.41579,2026-09-25,2026-09-25,1,3.25,1.61,0.323,0.307,insufficient_evidence,smouldering,449.5,,0,True,No registered industrial site nearby,Naragund,power_plant,F03029,14.53
+C15,5,28.65238,77.57117,2026-09-22,2026-09-24,3,1.3,0.88,0.318,0.386,insufficient_evidence,smouldering,484.0,osm,1,False,Within the site's immediate surroundings,,works,F02096,1.69
+C30,3,22.79009,86.20228,2026-09-22,2026-09-25,4,1.34,1.22,0.303,0.435,insufficient_evidence,unknown,537.4,gem|osm,2,True,Near industrial activity,Kadma Telephone Exchange,industrial_area,F01142,3.42
+C84,2,20.99695,86.01237,2026-09-25,2026-09-25,1,0.9,0.9,0.301,0.441,industrial_fire,biomass_like,514.8,gem|osm,2,True,On a registered industrial site,Neelachal Ispat Nigam steel plant,steel,F01703,0.71
+C5,9,28.34445,77.2401,2026-09-22,2026-09-25,4,1.66,1.12,0.301,0.341,insufficient_evidence,smouldering,460.5,osm,1,False,Near industrial activity,,industrial_area,F02238,5.29
+C35,3,27.28847,73.83908,2026-09-22,2026-09-24,3,1.71,1.53,0.294,0.309,insufficient_evidence,smouldering,512.6,,0,False,No registered industrial site nearby,Nimbri Chandawatan power station,power_plant,F03676,14.48
+C37,3,28.11325,77.62058,2026-09-22,2026-09-23,2,4.83,3.86,0.293,0.243,insufficient_evidence,biomass_like,728.4,osm,1,False,Within the site's immediate surroundings,,industrial_area,F02257,1.63
+C38,3,11.81234,77.91948,2026-09-23,2026-09-26,4,1.88,1.2,0.291,0.382,insufficient_evidence,unknown,439.9,gem,1,False,On a registered industrial site,Mettur Siscol power station,power_plant,F03651,0.92
+C94,2,31.33795,75.02598,2026-09-26,2026-09-26,1,4.08,3.83,0.283,0.12,insufficient_evidence,biomass_like,555.1,,0,True,No registered industrial site nearby,GOINDWAL SAHIB TPP,power_plant,F02591,12.41
+C96,2,31.78632,74.5713,2026-09-26,2026-09-26,1,3.66,3.66,0.276,0.153,insufficient_evidence,biomass_like,591.4,,0,True,No registered industrial site nearby,GOINDWAL SAHIB TPP,power_plant,F02591,70.34
+C61,2,24.11539,86.85887,2026-09-22,2026-09-25,4,2.3,1.55,0.275,0.307,insufficient_evidence,unknown,,,0,True,No registered industrial site nearby,,industrial_area,F01304,22.2
+C59,2,23.58051,86.72472,2026-09-22,2026-09-25,4,1.65,1.42,0.275,0.361,insufficient_evidence,unknown,,gem,1,False,Within the site's immediate surroundings,Shyam Steel Raghunathpur Steel Plant,steel,F03830,1.0
+C60,2,23.66947,86.93491,2026-09-22,2026-09-22,1,1.58,1.2,0.269,0.442,industrial_fire,smouldering,430.4,gem|osm,2,False,On a registered industrial site,SAIL IISCO steel plant,steel,F01141,0.87
+C93,2,29.2267,73.64489,2026-09-26,2026-09-26,1,3.57,3.57,0.265,0.141,insufficient_evidence,biomass_like,692.3,,0,True,No registered industrial site nearby,SURATGARH,power_plant,F03236,36.6
+C40,3,23.3103,70.48312,2026-09-23,2026-09-25,3,1.61,1.03,0.258,0.347,insufficient_evidence,smouldering,482.7,osm,1,True,On a registered industrial site,,industrial_area,F00353,0.13
+C41,3,28.5656,77.55751,2026-09-24,2026-09-24,1,1.39,1.09,0.249,0.326,insufficient_evidence,unknown,,osm,1,False,Within the site's immediate surroundings,,industrial_area,F02041,1.3
+C67,2,28.84475,77.14338,2026-09-22,2026-09-25,4,0.81,0.71,0.245,0.323,insufficient_evidence,smouldering,425.0,osm,1,True,Within the site's immediate surroundings,All India Radio SW,industrial_area,F02035,1.26
+C51,2,20.79229,85.25594,2026-09-22,2026-09-22,1,1.29,1.04,0.237,0.39,insufficient_evidence,unknown,,gem|osm,2,False,Within the site's immediate surroundings,Tata Steel BSL Dhenkanal plant,steel,F01672,1.12
+C92,2,10.42685,79.23138,2026-09-26,2026-09-26,1,3.22,3.07,0.235,0.115,insufficient_evidence,biomass_like,510.0,,0,True,No registered industrial site nearby,KOVILKALAPPAL,power_plant,F02756,26.95
+C32,3,23.6926,87.10471,2026-09-22,2026-09-22,1,1.71,1.68,0.234,0.361,insufficient_evidence,unknown,,gem,1,False,On a registered industrial site,Rashmi Metaliks Jamuria steel plant,steel,F03821,0.89
+C81,2,31.46811,74.88411,2026-09-23,2026-09-25,3,3.83,2.79,0.225,0.13,insufficient_evidence,biomass_like,623.5,,0,True,No registered industrial site nearby,GOINDWAL SAHIB TPP,power_plant,F02591,26.78
+C50,2,15.65736,73.98897,2026-09-22,2026-09-25,4,1.22,0.82,0.222,0.28,insufficient_evidence,smouldering,400.7,,0,False,No registered industrial site nearby,Vedanta Sesa Goa Pig Iron Plant,steel,F03836,14.56
+C87,2,30.81183,76.01533,2026-09-25,2026-09-25,1,1.26,1.23,0.22,0.245,insufficient_evidence,smouldering,422.7,,0,True,No registered industrial site nearby,Gobindpura power station,power_plant,F03561,12.22
+C77,2,28.02985,76.49474,2026-09-23,2026-09-23,1,1.84,1.73,0.19,0.265,insufficient_evidence,unknown,,,0,False,No registered industrial site nearby,NTN NEI Manufacturing,works,F01979,13.43
+C66,2,28.78048,76.9472,2026-09-22,2026-09-22,1,1.88,1.17,0.189,0.244,insufficient_evidence,biomass_like,522.0,,0,False,Near industrial activity,Maruti Suzuki Manufacturing Plant Kharkhoda,works,F02260,6.19
+C56,2,22.96467,75.78421,2026-09-22,2026-09-23,2,3.31,3.25,0.188,0.112,insufficient_evidence,biomass_like,553.9,,0,False,No registered industrial site nearby,Nagda Hills Wind Energy project,power_plant,F03020,31.08
+C83,2,31.41246,76.83482,2026-09-24,2026-09-25,2,1.03,0.95,0.187,0.289,insufficient_evidence,smouldering,412.4,,0,True,Near industrial activity,DEHAR,power_plant,F02524,3.04
+C47,2,8.91826,77.50308,2026-09-22,2026-09-22,1,2.81,2.32,0.183,0.16,insufficient_evidence,biomass_like,707.6,,0,False,Near industrial activity,Wind power project by Riddhi Siddhi Gluco Biols Limited (RSGBL),power_plant,F03425,7.94
+C63,2,24.20142,82.71303,2026-09-22,2026-09-22,1,1.54,1.54,0.182,0.252,insufficient_evidence,smouldering,479.8,,0,False,Near industrial activity,"ANAPARA ""C""",power_plant,F02296,7.85
+C57,2,23.10478,75.715,2026-09-22,2026-09-24,3,3.16,2.52,0.18,0.113,insufficient_evidence,biomass_like,544.3,,0,False,No registered industrial site nearby,Nagda Hills Wind Energy project,power_plant,F03020,43.28
+C62,2,24.1816,82.6529,2026-09-22,2026-09-22,1,0.88,0.76,0.177,0.278,insufficient_evidence,unknown,,,0,False,Near industrial activity,Singrauli Solar Power Plant,power_plant,F03287,7.34
+C31,3,23.66417,87.15658,2026-09-22,2026-09-22,1,1.38,1.3,0.172,0.242,insufficient_evidence,smouldering,490.6,,0,False,Near industrial activity,Rashmi Metaliks Jamuria steel plant,steel,F03821,5.71
+C73,2,22.01634,83.75469,2026-09-23,2026-09-23,1,0.7,0.7,0.169,0.274,insufficient_evidence,biomass_like,542.0,,0,False,No registered industrial site nearby,Darlipali power station,power_plant,F03522,15.51
+C64,2,24.92666,84.15226,2026-09-22,2026-09-22,1,1.06,0.81,0.165,0.241,insufficient_evidence,unknown,,,0,False,No registered industrial site nearby,NABI NAGAR TPP,power_plant,F02987,17.26
+C76,2,27.51447,78.42526,2026-09-23,2026-09-23,1,2.87,2.27,0.163,0.141,insufficient_evidence,unknown,,,0,False,No registered industrial site nearby,Gayatree power station,power_plant,F03552,27.36
+C78,2,28.89341,78.85587,2026-09-23,2026-09-23,1,1.03,0.89,0.152,0.23,insufficient_evidence,smouldering,419.7,,0,False,No registered industrial site nearby,Lakhisarai power station (SPML),power_plant,F03632,17.36
+C58,2,23.55892,87.23566,2026-09-22,2026-09-22,1,0.64,0.53,0.144,0.224,insufficient_evidence,unknown,,gem,1,False,Within the site's immediate surroundings,Durgapur SAIL power station,power_plant,F03538,1.18
+C48,2,9.64598,77.74256,2026-09-22,2026-09-22,1,1.71,1.71,0.131,0.126,insufficient_evidence,biomass_like,599.0,,0,False,No registered industrial site nearby,Moolippatti,power_plant,F02966,11.92
+C79,2,29.7829,74.83567,2026-09-23,2026-09-23,1,2.45,2.16,0.125,0.085,insufficient_evidence,biomass_like,571.3,,0,False,No registered industrial site nearby,Guru Gobind Singh Refinery power station,power_plant,F03774,20.13

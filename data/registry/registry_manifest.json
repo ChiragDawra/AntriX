@@ -1,0 +1,98 @@
+{
+  "built_at": "2026-09-26 14:37 UTC",
+  "sources": {
+    "osm": {
+      "label": "OpenStreetMap (Overpass)",
+      "short": "OSM",
+      "license": "ODbL 1.0 \u2014 \u00a9 OpenStreetMap contributors",
+      "homepage": "https://www.openstreetmap.org/copyright",
+      "fetch": {
+        "status": "cached",
+        "path": "/Users/chiragdawra/Desktop/HackSpace/AntriX/data/raw/osm_industrial.json",
+        "bytes": 5504668
+      },
+      "records": 16299,
+      "status": "loaded",
+      "by_type": {
+        "industrial_area": 11535,
+        "works": 3639,
+        "power_plant": 924,
+        "steel": 117,
+        "cement": 36,
+        "refinery": 33,
+        "smelter": 15
+      },
+      "hint": ""
+    },
+    "wri": {
+      "label": "WRI Global Power Plant DB",
+      "short": "WRI",
+      "license": "CC BY 4.0 \u2014 World Resources Institute",
+      "homepage": "https://datasets.wri.org/dataset/globalpowerplantdatabase",
+      "fetch": {
+        "status": "cached",
+        "path": "/Users/chiragdawra/Desktop/HackSpace/AntriX/data/raw/wri_global_power_plant_database.csv",
+        "bytes": 11973385
+      },
+      "records": 1589,
+      "status": "loaded",
+      "by_type": {
+        "power_plant": 1589
+      },
+      "hint": ""
+    },
+    "gem": {
+      "label": "Global Energy Monitor",
+      "short": "GEM",
+      "license": "CC BY 4.0 \u2014 Global Energy Monitor",
+      "homepage": "https://globalenergymonitor.org/projects/",
+      "fetch": {
+        "status": "ok",
+        "parts": {
+          "gem_coal_plant_tracker.xlsx": {
+            "status": "cached",
+            "path": "/Users/chiragdawra/Desktop/HackSpace/AntriX/data/raw/gem_coal_plant_tracker.xlsx",
+            "bytes": 2942220
+          },
+          "gem_oil_gas_plant_tracker.xlsx": {
+            "status": "cached",
+            "path": "/Users/chiragdawra/Desktop/HackSpace/AntriX/data/raw/gem_oil_gas_plant_tracker.xlsx",
+            "bytes": 3248102
+          },
+          "gem_steel_plant_tracker.xlsx": {
+            "status": "cached",
+            "path": "/Users/chiragdawra/Desktop/HackSpace/AntriX/data/raw/gem_steel_plant_tracker.xlsx",
+            "bytes": 842098
+          }
+        },
+        "loaded": 3,
+        "expected": 3
+      },
+      "records": 2272,
+      "status": "loaded",
+      "by_type": {
+        "power_plant": 2092,
+        "steel": 180
+      },
+      "hint": ""
+    },
+    "eog": {
+      "label": "NOAA EOG Global Flare Inventory",
+      "short": "NOAA EOG",
+      "license": "Earth Observation Group, Payne Institute, Colorado School of Mines",
+      "homepage": "https://eogdata.mines.edu/products/vnf/",
+      "fetch": {
+        "status": "unavailable",
+        "error": "no local file and SATAT_EOG_URL is not set",
+        "hint": "Download the flare inventory from https://eogdata.mines.edu/products/vnf/ (free account) and save it as /Users/chiragdawra/Desktop/HackSpace/AntriX/data/raw/eog_flares.csv"
+      },
+      "records": 0,
+      "status": "unavailable",
+      "by_type": {},
+      "hint": "Download the flare inventory from https://eogdata.mines.edu/products/vnf/ (free account) and save it as /Users/chiragdawra/Desktop/HackSpace/AntriX/data/raw/eog_flares.csv"
+    }
+  },
+  "total_records": 20160,
+  "total_sites": 3838,
+  "multi_source_sites": 363
+}

@@ -1,0 +1,210 @@
+{
+  "classifier": {
+    "available": true,
+    "n_positive": 53,
+    "n_negative": 294,
+    "folds": 5,
+    "roc_auc": 0.8436,
+    "average_precision": 0.5804,
+    "precision": 0.4066,
+    "recall": 0.6981,
+    "f1": 0.5139,
+    "confusion": {
+      "tp": 37,
+      "fp": 54,
+      "tn": 240,
+      "fn": 16
+    },
+    "features": [
+      "frp",
+      "frp_robust_z",
+      "est_temp_k_filled",
+      "hot_fraction_log",
+      "recurrence_days",
+      "night_fraction",
+      "duty_cycle",
+      "frp_shift"
+    ],
+    "note": "Labels are weak: positives are detections on a site at least two registries agree on, outside crop-burning season; negatives are more than 10 km from anything any registry lists. The model never sees distance or corroboration as a feature, only thermal physics and timing, so these numbers measure whether the physics and the registries agree -- not accuracy against field-verified truth, which SATAT does not have."
+  },
+  "ablation": [
+    {
+      "sources": [
+        "osm"
+      ],
+      "label": "OSM",
+      "corroborated": 167,
+      "multi_confirmed": 0,
+      "industrial_total": 135,
+      "persistent": 32,
+      "insufficient": 489,
+      "median_distance_km": 165.007,
+      "cv_auc": null
+    },
+    {
+      "sources": [
+        "wri"
+      ],
+      "label": "WRI",
+      "corroborated": 87,
+      "multi_confirmed": 0,
+      "industrial_total": 91,
+      "persistent": 18,
+      "insufficient": 533,
+      "median_distance_km": 14.449,
+      "cv_auc": null
+    },
+    {
+      "sources": [
+        "gem"
+      ],
+      "label": "GEM",
+      "corroborated": 105,
+      "multi_confirmed": 0,
+      "industrial_total": 99,
+      "persistent": 22,
+      "insufficient": 525,
+      "median_distance_km": 21.651,
+      "cv_auc": null
+    },
+    {
+      "sources": [
+        "eog"
+      ],
+      "label": "EOG",
+      "corroborated": 0,
+      "multi_confirmed": 0,
+      "industrial_total": 0,
+      "persistent": 0,
+      "insufficient": 624,
+      "median_distance_km": Infinity,
+      "cv_auc": null
+    },
+    {
+      "sources": [
+        "osm",
+        "wri"
+      ],
+      "label": "OSM + WRI",
+      "corroborated": 200,
+      "multi_confirmed": 54,
+      "industrial_total": 68,
+      "persistent": 27,
+      "insufficient": 556,
+      "median_distance_km": 9.937,
+      "cv_auc": 0.9313010140984418
+    },
+    {
+      "sources": [
+        "osm",
+        "gem"
+      ],
+      "label": "OSM + GEM",
+      "corroborated": 200,
+      "multi_confirmed": 72,
+      "industrial_total": 77,
+      "persistent": 21,
+      "insufficient": 547,
+      "median_distance_km": 14.804,
+      "cv_auc": 0.7993233082706767
+    },
+    {
+      "sources": [
+        "wri",
+        "gem"
+      ],
+      "label": "WRI + GEM",
+      "corroborated": 128,
+      "multi_confirmed": 64,
+      "industrial_total": 70,
+      "persistent": 20,
+      "insufficient": 554,
+      "median_distance_km": 12.695,
+      "cv_auc": 0.8656398697721011
+    },
+    {
+      "sources": [
+        "osm",
+        "wri",
+        "gem"
+      ],
+      "label": "OSM + WRI + GEM",
+      "corroborated": 219,
+      "multi_confirmed": 90,
+      "industrial_total": 88,
+      "persistent": 25,
+      "insufficient": 536,
+      "median_distance_km": 8.648,
+      "cv_auc": 0.8436015915800282
+    },
+    {
+      "sources": [
+        "osm",
+        "wri",
+        "gem",
+        "eog"
+      ],
+      "label": "OSM + WRI + GEM + EOG",
+      "corroborated": 219,
+      "multi_confirmed": 90,
+      "industrial_total": 88,
+      "persistent": 25,
+      "insufficient": 536,
+      "median_distance_km": 8.648,
+      "cv_auc": 0.8436015915800282
+    }
+  ],
+  "overlap": {
+    "per_source": {
+      "osm": {
+        "records": 16299,
+        "sites": 2285,
+        "confirmed_by_other": 209
+      },
+      "wri": {
+        "records": 1589,
+        "sites": 1279,
+        "confirmed_by_other": 281
+      },
+      "gem": {
+        "records": 2272,
+        "sites": 706,
+        "confirmed_by_other": 305
+      },
+      "eog": {
+        "records": 0,
+        "sites": 0,
+        "confirmed_by_other": 0
+      }
+    },
+    "pairs": {
+      "osm+wri": 127,
+      "osm+gem": 151,
+      "osm+eog": 0,
+      "wri+gem": 223,
+      "wri+eog": 0,
+      "gem+eog": 0
+    },
+    "total_sites": 3838,
+    "multi_source_sites": 363
+  },
+  "retrieval_status": {
+    "weak_11um": 315,
+    "ok": 284,
+    "no_bracket": 19,
+    "saturated_lower_bound": 6
+  },
+  "retrieval_rate": 0.4567,
+  "temp_class_counts": {
+    "unknown": 339,
+    "biomass_like": 149,
+    "smouldering": 133,
+    "mixed": 3
+  },
+  "label_counts": {
+    "insufficient_evidence": 536,
+    "industrial_fire": 63,
+    "persistent_industrial_source": 25
+  },
+  "detections": 624
+}
