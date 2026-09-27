@@ -5,3 +5,16 @@ __pycache__/
 cache/
 .idea/
 .DS_Store
+.pytest_cache/
+
+# Raw registry downloads: 24 MB of upstream files that build_registry.py can
+# re-fetch on demand. The derived registry (data/registry/) IS committed, so a
+# fresh clone can run the analysis without first hitting four external
+# services -- which matters when the demo is on venue wifi.
+data/raw/
+
+# Model artefact, rebuilt by run_analysis.py
+satat_model_v3.pkl
+
+# Local tokensave MCP cache/index db, machine-specific
+.tokensave/
