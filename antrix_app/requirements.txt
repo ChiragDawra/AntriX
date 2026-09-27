@@ -1,3 +1,5 @@
-flask
-pandas
-gunicorn
+# Deployment only needs what the web app imports; the pipeline's heavier
+# dependencies (scikit-learn, scipy, shapely, openpyxl) run offline.
+flask>=3.0
+pandas>=2.0
+gunicorn>=21.2

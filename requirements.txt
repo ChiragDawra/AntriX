@@ -1,10 +1,14 @@
-flask
-pandas
-numpy
-folium
-geopandas
-shapely
-osmnx
-requests
-scikit-learn
-joblib
+# Runtime
+flask>=3.0
+pandas>=2.0
+numpy>=1.26
+scikit-learn>=1.4
+scipy>=1.11
+requests>=2.31
+openpyxl>=3.1          # GEM trackers ship as .xlsx
+shapely>=2.0           # India boundary clip in clean_detections.py
+joblib>=1.3
+
+# Development / verification
+pytest>=8.0
+playwright>=1.44       # browser tests; run `playwright install chromium` once
