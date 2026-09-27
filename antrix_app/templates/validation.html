@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SATAT — Validation</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="/static/pages.css">
+</head>
+<body>
+
+<header class="bar">
+  <a class="brand" href="/">SATAT</a>
+  <nav>
+    <a href="/">Dashboard</a>
+    <a href="/validation" aria-current="page">Validation</a>
+    <a href="/data-dictionary">Columns</a>
+    <a href="/api/docs">API</a>
+  </nav>
+</header>
+
+<main>
+  <h1>Validation</h1>
+  <p class="lede">
+    Snapshot <span class="mono">{{ snapshot.snapshot_id }}</span> ·
+    {{ snapshot.get('date_range', ['?','?'])[0] }} → {{ snapshot.get('date_range', ['?','?'])[1] }} ·
+    method v{{ snapshot.get('method_version', '—') }} · build <span class="mono">{{ build }}</span>
+  </p>
+
+  <p>
+    Everything on this page is recomputed by <code>evaluate.py</code> from the
+    current snapshot. If a number here disagrees with the dashboard, the
+    pipeline has been rerun and this page has not.
+  </p>
+
+  {% if not validation %}
+  <div class="note warn">
+    No validation report found. Run <code>python evaluate.py</code> after
+    <code>python run_analysis.py</code>.
+  </div>
+  {% else %}
+
+  <h2>What this does and does not measure</h2>
+  <div class="note">
+    SATAT has no field-verified ground truth: nobody has visited these
+    coordinates to confirm what was burning. Claiming an accuracy figure
+    against truth would therefore be an invention. What <em>can</em> be
+    measured is whether the thermal physics and timing alone can predict
+    something they were never shown — whether a detection sits on a site that
+    two or more independent registries agree exists. That is the number below.
+  </div>
+
+  <h2>Classifier — out-of-fold performance</h2>
+  {% if validation.classifier.available %}
+  <div class="cards">
+    <div class="card"><div class="v">{{ '%.3f'|format(validation.classifier.roc_auc) }}</div><div class="k">ROC AUC</div></div>
+    <div class="card"><div class="v">{{ '%.3f'|format(validation.classifier.average_precision) }}</div><div class="k">Avg precision</div></div>
+    <div class="card"><div class="v">{{ '%.3f'|format(validation.classifier.precision) }}</div><div class="k">Precision</div></div>
+    <div class="card"><div class="v">{{ '%.3f'|format(validation.classifier.recall) }}</div><div class="k">Recall</div></div>
+    <div class="card"><div class="v">{{ '%.3f'|format(validation.classifier.f1) }}</div><div class="k">F1</div></div>
+  </div>
+
+  <p>
+    {{ validation.classifier.folds }}-fold stratified cross-validation over
+    {{ validation.classifier.n_positive }} positives and
+    {{ validation.classifier.n_negative }} negatives. Every prediction scored
+    here comes from a fold that did not contain the row being scored.
+  </p>
+
+  <h3>Confusion matrix</h3>
+  <table>
+    <thead>
+      <tr><th></th><th class="num">Predicted industrial</th><th class="num">Predicted not</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th>Actually on a multi-registry site</th>
+        <td class="num">{{ validation.classifier.confusion.tp }}</td>
+        <td class="num">{{ validation.classifier.confusion.fn }}</td>
+      </tr>
+      <tr>
+        <th>Actually far from every registry</th>
+        <td class="num">{{ validation.classifier.confusion.fp }}</td>
+        <td class="num">{{ validation.classifier.confusion.tn }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note">{{ validation.classifier.note }}</div>
+
+  <p>
+    Read it this way: an AUC of
+    {{ '%.2f'|format(validation.classifier.roc_auc) }} says the thermal and
+    temporal signature carries real but partial information about whether a
+    detection is industrial. Partial is the point — it is exactly why the
+    final score fuses the model with registry corroboration and an
+    unsupervised outlier score instead of trusting any one of them.
+  </p>
+
+  <h3>Features the model is allowed to see</h3>
+  <p>
+    <code>{{ validation.classifier.features|join('</code>, <code>')|safe }}</code>
+  </p>
+  <p>
+    Distance and corroboration are deliberately absent. Including them would
+    let the model restate its own labels, which is what made the previous
+    version's reported accuracy meaningless.
+  </p>
+  {% else %}
+  <div class="note warn">{{ validation.classifier.reason }}</div>
+  {% endif %}
+
+  <h2>Registry ablation — what each source actually adds</h2>
+  <p>
+    The same detections, scored against different subsets of the four
+    registries. This is the argument for multi-source cross-referencing,
+    stated as a measurement rather than a claim.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Registries</th>
+        <th class="num">Corroborated</th>
+        <th class="num">2+ sources</th>
+        <th class="num">Industrial</th>
+        <th class="num">Persistent</th>
+        <th class="num">Median distance</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in validation.ablation %}
+      <tr{% if row.sources|length == 4 %} style="background:var(--surface-2)"{% endif %}>
+        <td class="mono">{{ row.label }}</td>
+        <td class="num">{{ row.corroborated }}</td>
+        <td class="num">{{ row.multi_confirmed }}</td>
+        <td class="num">{{ row.industrial_total }}</td>
+        <td class="num">{{ row.persistent }}</td>
+        <td class="num">
+          {% if row.median_distance_km == row.median_distance_km and row.median_distance_km < 100000 %}
+            {{ '%.1f'|format(row.median_distance_km) }} km
+          {% else %}—{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% set single = validation.ablation | selectattr('sources', 'equalto', ['osm']) | first %}
+  {% set full = validation.ablation | selectattr('sources', 'equalto', ['osm','wri','gem','eog']) | first %}
+  {% if single and full %}
+  <div class="note">
+    On its own, OSM corroborates {{ single.corroborated }} detections and leaves
+    the median detection {{ '%.1f'|format(single.median_distance_km) }} km from
+    anything it lists — its coverage is a handful of industrial belts, not the
+    country. With all loaded registries the median falls to
+    {{ '%.1f'|format(full.median_distance_km) }} km and
+    {{ full.corroborated }} detections are corroborated. No single source gets
+    close to that, which is the entire argument for cross-referencing four of
+    them rather than trusting one.
+  </div>
+  {% endif %}
+
+  <h2>Registry composition</h2>
+  <div class="cards">
+    <div class="card"><div class="v">{{ validation.overlap.total_sites }}</div><div class="k">Distinct sites</div></div>
+    <div class="card"><div class="v">{{ validation.overlap.multi_source_sites }}</div><div class="k">Seen by 2+ sources</div></div>
+    <div class="card"><div class="v">{{ manifest.get('total_records', 0) }}</div><div class="k">Source records</div></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>Source</th><th>Status</th><th class="num">Records</th><th class="num">Sites</th><th class="num">Confirmed elsewhere</th><th>Licence</th></tr>
+    </thead>
+    <tbody>
+      {% for key, info in manifest.get('sources', {}).items() %}
+      <tr>
+        <td>{{ info.short }}</td>
+        <td>
+          <span class="pill">
+            <span class="dot {{ 'ok' if info.status == 'loaded' else 'off' }}"></span>
+            {{ info.status }}
+          </span>
+        </td>
+        <td class="num">{{ info.records }}</td>
+        <td class="num">{{ validation.overlap.per_source.get(key, {}).get('sites', 0) }}</td>
+        <td class="num">{{ validation.overlap.per_source.get(key, {}).get('confirmed_by_other', 0) }}</td>
+        <td style="font-size:11px;color:var(--dim)">{{ info.license }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% for key, info in manifest.get('sources', {}).items() %}
+    {% if info.status != 'loaded' and info.hint %}
+    <div class="note warn"><b>{{ info.short }}</b> is not loaded. {{ info.hint }}</div>
+    {% endif %}
+  {% endfor %}
+
+  <h2>Sub-pixel retrieval coverage</h2>
+  <p>
+    The bi-spectral solve returns a temperature only where the observation
+    constrains one. Reporting a number for every pixel would be easy and
+    wrong: below, the honest breakdown.
+  </p>
+
+  <table>
+    <thead><tr><th>Status</th><th class="num">Detections</th><th style="width:38%"></th></tr></thead>
+    <tbody>
+      {% set total = validation.detections %}
+      {% for status, count in validation.retrieval_status.items() %}
+      <tr>
+        <td class="mono">{{ status }}</td>
+        <td class="num">{{ count }}</td>
+        <td>
+          <div class="bar-cell">
+            <span class="track"><i class="fill" style="width:{{ (count / total * 100)|round(1) }}%"></i></span>
+            <span class="mono" style="font-size:11px;color:var(--dim)">{{ (count / total * 100)|round(1) }}%</span>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="note">
+    Two limits worth stating before anyone asks. FIRMS publishes the two
+    I-band channels; NOAA EOG's Nightfire, which catalogues flares for a
+    living, uses several short-wave M-bands that constrain high temperatures
+    far better. And VIIRS I4 saturates at 367 K, above which the retrieval
+    returns a floor rather than a value. Both mean the very hottest sources
+    are the ones SATAT is least able to pin down from this feed — so a
+    snapshot can legitimately contain zero <code>flare_signature</code>
+    detections. That is the honest answer, not a broken feature.
+  </div>
+
+  <h3>Combustion regimes among successful retrievals</h3>
+  <table>
+    <thead><tr><th>Regime</th><th class="num">Detections</th></tr></thead>
+    <tbody>
+      {% for name, count in validation.temp_class_counts.items() %}
+      <tr><td class="mono">{{ name }}</td><td class="num">{{ count }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Reproducing this</h2>
+  <div class="panel">
+    <p style="margin:0 0 6px"><code>python build_registry.py</code> — fetch and cross-reference the four registries</p>
+    <p style="margin:0 0 6px"><code>python fetch_data_v3.py && python clean_detections.py</code> — pull and clean FIRMS</p>
+    <p style="margin:0 0 6px"><code>python run_analysis.py</code> — physics, timing, scoring, classification</p>
+    <p style="margin:0"><code>python evaluate.py</code> — regenerate this page's numbers</p>
+  </div>
+
+  {% endif %}
+</main>
+</body>
+</html>

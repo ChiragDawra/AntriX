@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SATAT — Column reference</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="/static/pages.css">
+</head>
+<body>
+
+<header class="bar">
+  <a class="brand" href="/">SATAT</a>
+  <nav>
+    <a href="/">Dashboard</a>
+    <a href="/validation">Validation</a>
+    <a href="/data-dictionary" aria-current="page">Columns</a>
+    <a href="/api/docs">API</a>
+  </nav>
+</header>
+
+<main>
+  <h1>Column reference</h1>
+  <p class="lede">
+    Every column in the detections CSV and the <code>/api/detections</code>
+    response, and what it actually means.
+  </p>
+
+  {% for section, rows in columns %}
+  <h2>{{ section }}</h2>
+  <table>
+    <thead><tr><th style="width:33%">Column</th><th>Meaning</th></tr></thead>
+    <tbody>
+      {% for name, description in rows %}
+      <tr>
+        <td class="mono" style="color:var(--text-2)">{{ name }}</td>
+        <td style="color:var(--text-2)">{{ description }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endfor %}
+
+  <div class="note">
+    Booleans export as <code>True</code>/<code>False</code>. Empty means the
+    value could not be computed for that row — which, for
+    <code>est_temp_k</code>, is a statement about the observation rather than
+    a gap in the data.
+  </div>
+</main>
+</body>
+</html>

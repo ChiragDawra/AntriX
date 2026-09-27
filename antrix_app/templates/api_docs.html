@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SATAT — API</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="/static/pages.css">
+</head>
+<body>
+
+<header class="bar">
+  <a class="brand" href="/">SATAT</a>
+  <nav>
+    <a href="/">Dashboard</a>
+    <a href="/validation">Validation</a>
+    <a href="/data-dictionary">Columns</a>
+    <a href="/api/docs" aria-current="page">API</a>
+  </nav>
+</header>
+
+<main>
+  <h1>API</h1>
+  <p class="lede">
+    Read-only JSON and CSV. No key, no rate limit, same data the dashboard
+    draws from.
+  </p>
+
+  <h2>Filters</h2>
+  <p>
+    These apply to <code>/api/detections</code>,
+    <code>/api/export/detections.csv</code> and
+    <code>/api/export/detections.geojson</code> identically — the server
+    reuses one filter implementation, so an export always matches the screen
+    it was taken from.
+  </p>
+
+  <table>
+    <thead><tr><th style="width:26%">Parameter</th><th>Accepts</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">label</td><td>Comma-separated: <code>persistent_industrial_source</code>, <code>industrial_fire</code>, <code>flare_signature</code>, <code>agricultural_burning</code>, <code>insufficient_evidence</code></td></tr>
+      <tr><td class="mono">sources</td><td>Comma-separated registry keys: <code>osm</code>, <code>wri</code>, <code>gem</code>, <code>eog</code>. Keeps detections corroborated by any of them.</td></tr>
+      <tr><td class="mono">risk</td><td><code>Critical</code>, <code>High</code>, <code>Moderate</code>, <code>Low</code></td></tr>
+      <tr><td class="mono">temp_class</td><td><code>flare_like</code>, <code>furnace_like</code>, <code>mixed</code>, <code>biomass_like</code>, <code>smouldering</code>, <code>unknown</code></td></tr>
+      <tr><td class="mono">min_score</td><td>Float 0–1, minimum <code>risk_score</code></td></tr>
+      <tr><td class="mono">min_fusion</td><td>Float 0–1, minimum <code>anomaly_probability</code></td></tr>
+      <tr><td class="mono">from, to</td><td><code>YYYY-MM-DD</code>, inclusive</td></tr>
+      <tr><td class="mono">bbox</td><td><code>lon_min,lat_min,lon_max,lat_max</code></td></tr>
+      <tr><td class="mono">q</td><td>Substring match on the matched facility name</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Endpoints</h2>
+
+  <div class="endpoint">
+    <div class="head"><span class="method">GET</span><span class="path">/api/detections</span>
+      <a class="try" href="/api/detections?label=flare_signature,persistent_industrial_source">try it</a></div>
+    <div class="body">
+      <p>Scored detections, filtered. Returns the columns the map and feed use; the CSV export returns all of them.</p>
+    </div>
+  </div>
+
+  <div class="endpoint">
+    <div class="head"><span class="method">GET</span><span class="path">/api/detection/&lt;detection_id&gt;</span></div>
+    <div class="body"><p>One detection, every column, with <code>contributions</code> already parsed into an array.</p></div>
+  </div>
+
+  <div class="endpoint">
+    <div class="head"><span class="method">GET</span><span class="path">/api/clusters</span>
+      <a class="try" href="/api/clusters">try it</a></div>
+    <div class="body"><p>Spatio-temporal clusters: centroid, span, dominant class, dominant combustion regime and which registries confirm them.</p></div>
+  </div>
+
+  <div class="endpoint">
+    <div class="head"><span class="method">GET</span><span class="path">/api/facilities</span>
+      <a class="try" href="/api/facilities?source=gem&limit=20">try it</a></div>
+    <div class="body">
+      <p>The cross-referenced facility registry, one row per real-world site. Optional <code>source</code> and <code>bbox</code>; <code>limit</code> defaults to 4000.</p>
+    </div>
+  </div>
+
+  <div class="endpoint">
+    <div class="head"><span class="method">GET</span><span class="path">/api/sources</span>
+      <a class="try" href="/api/sources">try it</a></div>
+    <div class="body">
+      <p>Per-registry status, record counts, licensing and how many detections each one corroborates. A registry that failed to load reports <code>unavailable</code> and why.</p>
+    </div>
+  </div>
+
+  <div class="endpoint">
+    <div class="head"><span class="method">GET</span><span class="path">/api/stats</span>
+      <a class="try" href="/api/stats">try it</a></div>
+    <div class="body"><p>Snapshot id, date window, per-class counts, method version and the running build.</p></div>
+  </div>
+
+  <h2>Exports</h2>
+
+  <div class="endpoint">
+    <div class="head"><span class="method">GET</span><span class="path">/api/export/detections.csv</span>
+      <a class="try" href="/api/export/detections.csv?label=flare_signature">try it</a></div>
+    <div class="body"><p>Every column, filtered. Filename carries the snapshot id.</p></div>
+  </div>
+
+  <div class="endpoint">
+    <div class="head"><span class="method">GET</span><span class="path">/api/export/detections.geojson</span></div>
+    <div class="body"><p>The same rows as a FeatureCollection, for QGIS or ArcGIS.</p></div>
+  </div>
+
+  <div class="endpoint">
+    <div class="head"><span class="method">GET</span><span class="path">/api/export/clusters.csv</span></div>
+    <div class="body"><p>Cluster summaries.</p></div>
+  </div>
+
+  <div class="endpoint">
+    <div class="head"><span class="method">GET</span><span class="path">/api/export/facilities.csv</span></div>
+    <div class="body"><p>The facility registry. Optional <code>source</code>.</p></div>
+  </div>
+
+  <div class="endpoint">
+    <div class="head"><span class="method">GET</span><span class="path">/api/export/site/&lt;facility_uid&gt;.csv</span></div>
+    <div class="body"><p>Every detection attributed to one site — the investigation packet for a single facility.</p></div>
+  </div>
+
+  <h2>Example</h2>
+  <div class="panel">
+    <p style="margin:0 0 8px" class="mono" style="font-size:12px">
+      curl "http://localhost:5000/api/export/detections.csv?label=persistent_industrial_source&amp;sources=gem,wri&amp;min_score=0.5" -o sites.csv
+    </p>
+    <p style="margin:0;font-size:12px;color:var(--dim)">
+      Persistent industrial sources confirmed by GEM or WRI, priority 0.5 and above.
+    </p>
+  </div>
+
+  <div class="note">
+    Licensing travels with the data: OSM is ODbL, WRI and GEM are CC BY 4.0.
+    <code>/api/sources</code> returns the exact attribution string for each.
+  </div>
+</main>
+</body>
+</html>

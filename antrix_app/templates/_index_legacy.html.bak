@@ -1,0 +1,5699 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+
+<!--
+  Without this a phone assumes a ~980px desktop viewport and scales the
+  rendered page down to fit, which turns the whole dashboard into a
+  pinch-zoomable image: 7px header text, quarter-size tap targets, and
+  pinch gestures zooming the page instead of the map. viewport-fit=cover
+  is what makes env(safe-area-inset-*) resolve to real values on
+  notched devices.
+-->
+<meta name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+<title>SATAT — Industrial Thermal Anomaly Detection</title>
+
+<link rel="stylesheet"
+href="/static/vendor/leaflet.css"/>
+
+<link rel="stylesheet"
+href="/static/vendor/MarkerCluster.css"/>
+
+<link rel="stylesheet"
+href="/static/vendor/MarkerCluster.Default.css"/>
+
+<!--
+  Every other asset is now served locally, so the dashboard renders
+  with no third-party request in the critical path. Web fonts are
+  the one remaining external fetch and they are purely cosmetic, so
+  the stylesheet loads non-blocking: if fonts.googleapis.com is slow
+  or blocked on venue wifi the page still paints immediately on the
+  system-font fallbacks.
+-->
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap"
+rel="stylesheet" media="print" onload="this.media='all'">
+
+<style>
+
+:root {
+  --bg: #06060c;
+  --panel: #0a0912;
+  --panel2: #0f0d1a;
+  --panel3: #151126;
+
+  --border: #211c33;
+  --border2: #2e2646;
+
+  --text: #f5f3ff;
+  --text2: #ddd8ee;
+  --dim: #9690aa;
+  --dim2: #777187;
+
+  --purple: #8b3dff;
+  --purple2: #a855f7;
+  --purple3: #c084fc;
+
+  --red: #ff465c;
+  --red2: #dc263f;
+
+  --orange: #ff9d38;
+  --orange2: #e87917;
+
+  --gray: #89869d;
+  --green: #19c38a;
+
+  --navy: #0c0920;
+
+  /* shared surface language: one hairline, one glass, one lift */
+  --glass: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.012));
+  --hairline: 1px solid var(--border);
+  --lift: 0 18px 40px rgba(0,0,0,.45);
+  --r-sm: 9px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+
+  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* header height: mobile layout maths depend on it */
+  --hdr: 74px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+
+  /* iOS grows text in narrow columns otherwise. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow: hidden;
+}
+
+/* =========================================================
+   TOP BAR
+========================================================= */
+
+#topbar {
+  height: var(--hdr);
+
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  padding: 0 22px;
+
+  background:
+    radial-gradient(130% 260% at 0% 0%, rgba(139,61,255,.20), transparent 58%),
+    linear-gradient(180deg, #0c0a17 0%, #08070f 100%);
+
+  border-bottom: var(--hairline);
+
+  position: relative;
+  z-index: 1000;
+}
+
+/* Accent hairline: ties the header to the classification palette. */
+#topbar::after {
+  content: '';
+
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+
+  height: 1px;
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(139,61,255,.6) 25%,
+      rgba(255,110,60,.35) 65%,
+      transparent
+    );
+}
+
+#brand-row {
+  display: flex;
+  align-items: center;
+
+  gap: 14px;
+
+  min-width: 0;
+}
+
+#brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  min-width: 0;
+}
+
+#mark {
+  width: 40px;
+  height: 40px;
+
+  flex-shrink: 0;
+
+  border-radius: var(--r-md);
+
+  background: rgba(139,61,255,.07);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  overflow: hidden;
+
+  box-shadow:
+    0 0 0 1px rgba(139,61,255,.22),
+    0 0 22px rgba(139,61,255,.20);
+}
+
+#mark svg {
+  width: 100%;
+  height: 100%;
+
+  display: block;
+}
+
+#logo {
+  font-weight: 800;
+  font-size: 20px;
+
+  letter-spacing: 1.4px;
+  line-height: 1.05;
+
+  background:
+    linear-gradient(100deg, #ffffff 20%, #cfaaff 70%, #ff9d63 100%);
+
+  -webkit-background-clip: text;
+  background-clip: text;
+
+  color: transparent;
+}
+
+#tagline {
+  font-size: 11.5px;
+  color: #8e879f;
+
+  margin-top: 3px;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Live pill: makes it obvious the counts belong to a feed, not a file. */
+#live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 4px 10px;
+
+  border-radius: 999px;
+
+  border: 1px solid rgba(25,195,138,.28);
+
+  background: rgba(25,195,138,.09);
+
+  font-size: 10px;
+  font-weight: 700;
+
+  letter-spacing: .7px;
+  text-transform: uppercase;
+
+  color: #7ff0c4;
+
+  white-space: nowrap;
+}
+
+#live-pill .pulse {
+  width: 6px;
+  height: 6px;
+
+  border-radius: 50%;
+
+  background: var(--green);
+
+  box-shadow: 0 0 0 0 rgba(25,195,138,.65);
+
+  animation: pulse 2.2s infinite;
+}
+
+@keyframes pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(25,195,138,.55); }
+  70%  { box-shadow: 0 0 0 7px rgba(25,195,138,0); }
+  100% { box-shadow: 0 0 0 0 rgba(25,195,138,0); }
+}
+
+#stats {
+  display: flex;
+  gap: 8px;
+
+  margin-left: auto;
+}
+
+.stat {
+  position: relative;
+
+  min-width: 108px;
+
+  padding: 9px 13px 8px;
+
+  border: var(--hairline);
+  border-radius: var(--r-md);
+
+  background: var(--glass);
+
+  overflow: hidden;
+
+  transition: border-color .18s ease, transform .18s ease;
+}
+
+.stat::before {
+  content: '';
+
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+
+  width: 2px;
+
+  background: var(--accent, #3b3450);
+}
+
+.stat.s-fire   { --accent: var(--red); }
+.stat.s-persist{ --accent: var(--orange); }
+.stat.s-insuff { --accent: var(--gray); }
+.stat.s-total  { --accent: var(--purple2); }
+
+.stat:hover {
+  border-color: var(--border2);
+  transform: translateY(-1px);
+}
+
+.stat .val {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 22px;
+
+  color: #fff;
+  line-height: 1;
+
+  /* Counts re-render on filter changes; tabular digits stop jitter. */
+  font-variant-numeric: tabular-nums;
+}
+
+.stat .lbl {
+  font-size: 9.5px;
+  color: #8b8499;
+
+  text-transform: uppercase;
+  letter-spacing: .7px;
+
+  margin-top: 6px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 6px;
+
+  white-space: nowrap;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+
+  border-radius: 50%;
+
+  display: inline-block;
+  flex-shrink: 0;
+
+  /* Ties the legend swatch to the glow used on the map dots. */
+  box-shadow: 0 0 7px currentColor;
+}
+
+/* Header button that reveals the report list on small screens. */
+#nav-toggle {
+  display: none;
+
+  width: 40px;
+  height: 40px;
+
+  flex-shrink: 0;
+
+  margin-left: auto;
+
+  align-items: center;
+  justify-content: center;
+
+  border: var(--hairline);
+  border-radius: var(--r-md);
+
+  background: var(--glass);
+
+  color: #d9d3ec;
+
+  cursor: pointer;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+#nav-toggle:active {
+  background: rgba(139,61,255,.16);
+}
+
+#nav-toggle .badge {
+  position: absolute;
+
+  transform: translate(14px,-12px);
+
+  min-width: 16px;
+  height: 16px;
+
+  padding: 0 4px;
+
+  border-radius: 8px;
+
+  background: var(--red);
+
+  color: #fff;
+
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 16px;
+
+  text-align: center;
+}
+
+/* =========================================================
+   LAYOUT
+========================================================= */
+
+#layout {
+  display: flex;
+  height: calc(100vh - var(--hdr));
+}
+
+#map {
+  flex: 1;
+  position: relative;
+  background: #050509;
+
+  min-width: 0;
+}
+
+#feed {
+  width: 410px;
+  flex-shrink: 0;
+
+  background:
+    linear-gradient(180deg, #0a0912 0%, #08070e 100%);
+
+  border-left: var(--hairline);
+
+  display: flex;
+  flex-direction: column;
+
+  overflow: hidden;
+
+  min-width: 0;
+
+  box-shadow: -18px 0 45px rgba(0,0,0,.35);
+}
+
+/* =========================================================
+   RESIZE HANDLE
+========================================================= */
+
+#resize-handle {
+  width: 14px;
+  flex-shrink: 0;
+
+  background: #090810;
+
+  border-left: 1px solid #241d35;
+  border-right: 1px solid #241d35;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: ew-resize;
+  user-select: none;
+
+  z-index: 900;
+}
+
+#resize-handle:hover {
+  background: #151022;
+}
+
+#resize-handle.dragging {
+  background: #211533;
+}
+
+/* =========================================================
+   FEED
+========================================================= */
+
+#feed-header {
+  padding: 18px 20px 12px;
+
+  display: flex;
+  align-items: flex-start;
+
+  gap: 10px;
+}
+
+#feed-header h2 {
+  font-size: 15px;
+  font-weight: 700;
+
+  color: #f5f3ff;
+
+  letter-spacing: -.2px;
+}
+
+#feed-header .sub {
+  color: #8f89a4;
+  font-size: 11.5px;
+
+  margin-top: 4px;
+
+  line-height: 1.35;
+}
+
+/* Mobile-only dismiss for the full-screen report list. */
+#sheet-close {
+  display: none;
+
+  width: 34px;
+  height: 34px;
+
+  flex-shrink: 0;
+
+  margin-left: auto;
+
+  align-items: center;
+  justify-content: center;
+
+  border: var(--hairline);
+  border-radius: 50%;
+
+  background: var(--glass);
+
+  color: #cfc9e0;
+
+  font-size: 16px;
+  line-height: 1;
+
+  cursor: pointer;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+#filters,
+#sortrow {
+  display: flex;
+  gap: 6px;
+
+  padding: 0 16px 12px;
+
+  /* Chips stay on one line and scroll instead of wrapping. */
+  overflow-x: auto;
+
+  scrollbar-width: none;
+}
+
+#filters::-webkit-scrollbar,
+#sortrow::-webkit-scrollbar {
+  display: none;
+}
+
+#sortrow {
+  padding: 10px 16px;
+
+  align-items: center;
+
+  border-top: 1px solid #191430;
+  border-bottom: var(--hairline);
+}
+
+#filters {
+  border-bottom: 1px solid #191430;
+}
+
+.filter-btn {
+  font-family: inherit;
+
+  font-size: 11.5px;
+  font-weight: 600;
+
+  padding: 7px 13px;
+
+  flex-shrink: 0;
+
+  border-radius: 999px;
+
+  border: var(--hairline);
+
+  background: var(--glass);
+
+  color: #9a93ad;
+
+  cursor: pointer;
+
+  white-space: nowrap;
+
+  transition: color .15s ease, border-color .15s ease, background .15s ease;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+.filter-btn:hover {
+  border-color: #6b46b5;
+  color: #ddd6ef;
+}
+
+.filter-btn.active {
+  background:
+    linear-gradient(135deg, #4b1a9a, #7b2ee0);
+
+  color: #fff;
+
+  border-color: #8743e8;
+
+  box-shadow: 0 4px 18px rgba(139,61,255,.28);
+}
+
+.sortrow-label {
+  font-size: 10px;
+  font-weight: 700;
+
+  letter-spacing: .7px;
+  text-transform: uppercase;
+
+  color: #6f6980;
+
+  flex-shrink: 0;
+
+  margin-right: 2px;
+}
+
+/* =========================================================
+   FEED ITEMS
+========================================================= */
+
+#feed-list {
+  flex: 1;
+
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+
+  padding: 14px 16px 24px;
+}
+
+#feed-list::-webkit-scrollbar,
+#ev-body::-webkit-scrollbar {
+  width: 7px;
+}
+
+#feed-list::-webkit-scrollbar-thumb,
+#ev-body::-webkit-scrollbar-thumb {
+  background: #2b2440;
+  border-radius: 10px;
+}
+
+.feed-item {
+  position: relative;
+
+  background: linear-gradient(150deg, #0e0c1a, #0a0910);
+
+  border: var(--hairline);
+  border-radius: var(--r-lg);
+
+  padding: 13px 15px 13px 17px;
+
+  margin-bottom: 10px;
+
+  overflow: hidden;
+
+  cursor: pointer;
+
+  transition:
+    border-color .15s ease,
+    background .15s ease,
+    transform .15s ease,
+    box-shadow .15s ease;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Category accent rail, replaces the old flat left border. */
+.feed-item::before {
+  content: '';
+
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+
+  width: 3px;
+
+  background:
+    linear-gradient(180deg, var(--accent, var(--gray)), transparent 140%);
+}
+
+.feed-item:hover {
+  background: #12101d;
+  border-color: var(--border2);
+
+  transform: translateY(-1px);
+
+  box-shadow: 0 10px 26px rgba(0,0,0,.35);
+}
+
+.feed-item:active {
+  transform: scale(.995);
+}
+
+.feed-item.industrial_fire              { --accent: var(--red); }
+.feed-item.persistent_industrial_source { --accent: var(--orange); }
+.feed-item.insufficient_evidence        { --accent: var(--gray); }
+
+.feed-item .row1 {
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+
+  flex-wrap: wrap;
+}
+
+.feed-item .pill {
+  font-size: 9px;
+  font-weight: 800;
+
+  letter-spacing: .6px;
+
+  padding: 3px 8px;
+
+  border-radius: 999px;
+
+  color: #fff;
+
+  white-space: nowrap;
+}
+
+.feed-item .label {
+  font-weight: 700;
+  font-size: 11px;
+
+  text-transform: uppercase;
+  letter-spacing: .45px;
+
+  color: var(--accent, var(--gray));
+}
+
+.feed-item .scores {
+  display: flex;
+  gap: 8px;
+
+  margin-top: 9px;
+}
+
+.feed-item .chip {
+  flex: 1;
+
+  min-width: 0;
+
+  padding: 6px 9px;
+
+  border-radius: var(--r-sm);
+
+  border: 1px solid #201b31;
+
+  background: rgba(255,255,255,.022);
+}
+
+.feed-item .chip .k {
+  font-size: 8.5px;
+  font-weight: 700;
+
+  letter-spacing: .6px;
+  text-transform: uppercase;
+
+  color: #6f6980;
+}
+
+.feed-item .chip .v {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 700;
+
+  color: #efeaf9;
+
+  margin-top: 2px;
+
+  font-variant-numeric: tabular-nums;
+}
+
+.feed-item .meta {
+  color: #8d879f;
+  font-size: 11px;
+
+  margin-top: 9px;
+
+  line-height: 1.45;
+}
+
+.feed-item .meta b {
+  color: #e9e4f2;
+  font-weight: 600;
+
+  font-family: var(--mono);
+}
+
+/* =========================================================
+   MAP OVERLAY PANELS
+========================================================= */
+
+#legend,
+#layer-controls {
+  position: absolute;
+
+  z-index: 500;
+
+  background: rgba(9,8,15,.86);
+
+  border: 1px solid rgba(255,255,255,.07);
+
+  border-radius: var(--r-lg);
+
+  box-shadow: var(--lift);
+
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+}
+
+#legend {
+  bottom: 22px;
+  left: 22px;
+
+  padding: 14px 18px;
+
+  font-size: 12.5px;
+}
+
+#layer-controls {
+  top: 22px;
+  left: 22px;
+
+  padding: 14px 15px;
+
+  width: 186px;
+}
+
+#legend .title,
+#layer-controls .title {
+  font-weight: 700;
+  font-size: 10px;
+
+  margin-bottom: 10px;
+
+  color: #8e879f;
+
+  text-transform: uppercase;
+  letter-spacing: .8px;
+}
+
+#layer-controls .title.spaced {
+  margin-top: 14px;
+}
+
+#legend .row {
+  margin: 8px 0;
+
+  display: flex;
+  align-items: center;
+
+  gap: 9px;
+
+  color: #ddd8e7;
+}
+
+#layer-controls .btn-row {
+  display: flex;
+  gap: 6px;
+}
+
+#layer-controls .stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#layer-controls button {
+  flex: 1;
+
+  background: var(--glass);
+
+  border: var(--hairline);
+
+  color: #a09aaf;
+
+  padding: 9px 10px;
+
+  border-radius: 10px;
+
+  font-size: 11.5px;
+  font-family: inherit;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: all .15s;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+#layer-controls button:hover {
+  border-color: var(--border2);
+  color: #e8e4ef;
+}
+
+#layer-controls button.active {
+  background: linear-gradient(135deg, #4b1a9a, #7b2ee0);
+  border-color: #8355e8;
+  color: #fff;
+
+  box-shadow: 0 4px 16px rgba(139,61,255,.25);
+}
+
+/* Legend copy shown inside the mobile layers dialog only. */
+.mobile-only {
+  display: none;
+}
+
+/* Floating layers button (touch layouts). */
+#fab-layers {
+  display: none;
+
+  position: absolute;
+
+  right: 16px;
+
+  width: 48px;
+  height: 48px;
+
+  z-index: 600;
+
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 16px;
+
+  background: rgba(14,11,24,.92);
+
+  color: #ded7f0;
+
+  box-shadow: var(--lift);
+
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+
+  cursor: pointer;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+#fab-layers.active {
+  background: linear-gradient(135deg, #4b1a9a, #7b2ee0);
+  border-color: #8355e8;
+  color: #fff;
+}
+
+/* =========================================================
+   SNAPSHOT BADGE
+========================================================= */
+
+#snapshot-badge {
+  font-size: 10px;
+
+  color: #6f6980;
+
+  margin-top: 3px;
+
+  letter-spacing: .3px;
+
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* =========================================================
+   CONNECTOR
+========================================================= */
+
+#connector-line {
+  position: fixed;
+
+  height: 1.5px;
+
+  background:
+    repeating-linear-gradient(
+      to right,
+      #8b3dff 0 4px,
+      transparent 4px 7px
+    );
+
+  pointer-events: none;
+
+  z-index: 1500;
+
+  display: none;
+
+  box-shadow:
+    0 0 7px rgba(139,61,255,.6);
+}
+
+/* =========================================================
+   LEAFLET
+========================================================= */
+
+.leaflet-control-zoom {
+  border: none !important;
+  box-shadow: 0 8px 25px rgba(0,0,0,.35) !important;
+}
+
+.leaflet-control-zoom a {
+  background: #11101a !important;
+  color: #eee !important;
+  border-color: #302841 !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: #21152e !important;
+}
+
+/* =========================================================
+   DETAIL VIEW
+========================================================= */
+
+#detail-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+#ev-head {
+  padding: 15px 20px 18px;
+
+  color: #fff;
+
+  flex-shrink: 0;
+
+  position: relative;
+
+  background:
+    linear-gradient(
+      135deg,
+      #24113e,
+      #100b1c
+    );
+
+  border-bottom: 1px solid rgba(255,255,255,.12);
+
+  box-shadow:
+    inset 0 -20px 45px rgba(0,0,0,.15);
+}
+
+#ev-head.industrial {
+  background:
+    linear-gradient(
+      135deg,
+      #7d1527 0%,
+      #43101e 48%,
+      #170b13 100%
+    );
+}
+
+#ev-head.persistent {
+  background:
+    linear-gradient(
+      135deg,
+      #a84b10 0%,
+      #60300f 45%,
+      #1c1009 100%
+    );
+}
+
+#ev-head.insufficient {
+  background:
+    linear-gradient(
+      135deg,
+      #40395d 0%,
+      #27233c 45%,
+      #100d1a 100%
+    );
+}
+
+#ev-head .tag {
+  font-size: 10px;
+
+  font-family: 'JetBrains Mono';
+
+  opacity: .82;
+
+  text-transform: uppercase;
+
+  letter-spacing: .6px;
+
+  margin-top: 8px;
+
+  word-break: break-word;
+}
+
+#ev-head .title {
+  font-size: 18px;
+
+  font-weight: 800;
+
+  margin-top: 4px;
+
+  opacity: .98;
+
+  word-break: break-word;
+}
+
+#ev-head .score {
+  font-family: 'JetBrains Mono';
+
+  font-size: 20px;
+
+  font-weight: 700;
+
+  margin-top: 6px;
+}
+
+#ev-controls {
+  display: flex;
+  gap: 7px;
+
+  margin-top: 8px;
+}
+
+#ev-body {
+  padding: 14px 20px 20px;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  flex: 1;
+
+  min-width: 0;
+
+  background:
+    linear-gradient(
+      180deg,
+      #0b0912 0%,
+      #090810 100%
+    );
+}
+
+.ev-section-title {
+  font-size: 10px;
+
+  font-weight: 700;
+
+  color: #a49caf;
+
+  text-transform: uppercase;
+
+  letter-spacing: .55px;
+
+  margin: 14px 0 7px;
+}
+
+.ev-row {
+  display: flex;
+
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 6px 0;
+
+  border-bottom: 1px solid #211c2c;
+
+  font-size: 12px;
+
+  gap: 8px;
+
+  min-width: 0;
+
+  color: #ddd8e7;
+}
+
+.ev-row > span:first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+
+  word-break: break-word;
+}
+
+.ev-row .bar-bg {
+  flex: 1 1 40px;
+
+  min-width: 30px;
+
+  height: 5px;
+
+  background: #211d2b;
+
+  border-radius: 3px;
+
+  margin: 0 10px;
+
+  overflow: hidden;
+}
+
+.ev-row .bar-fill {
+  height: 100%;
+
+  border-radius: 3px;
+}
+
+.ev-row .amt {
+  font-family: 'JetBrains Mono';
+
+  font-weight: 700;
+
+  font-size: 11.5px;
+
+  width: 42px;
+
+  flex-shrink: 0;
+
+  text-align: right;
+
+  color: #eeeaf5;
+}
+
+#ev-note {
+  background:
+    linear-gradient(
+      135deg,
+      #15111f,
+      #100d18
+    );
+
+  border: 1px solid #2b2438;
+
+  border-radius: 7px;
+
+  padding: 10px 12px;
+
+  font-size: 11px;
+
+  color: #a19aaa;
+
+  margin-top: 10px;
+
+  line-height: 1.45;
+}
+
+#ev-close {
+  background:
+    rgba(255,255,255,.12);
+
+  border: 1px solid rgba(255,255,255,.18);
+
+  color: #fff;
+
+  padding: 6px 12px;
+
+  border-radius: 14px;
+
+  cursor: pointer;
+
+  font-size: 11px;
+
+  font-weight: 600;
+
+  transition: .15s;
+}
+
+#ev-close:hover {
+  background: rgba(255,255,255,.2);
+}
+
+.map-ctrl-btn {
+  background:
+    rgba(255,255,255,.11);
+
+  border: 1px solid rgba(255,255,255,.16);
+
+  color: #fff;
+
+  padding: 5px 10px;
+
+  border-radius: 12px;
+
+  cursor: pointer;
+
+  font-size: 10px;
+
+  font-weight: 600;
+}
+
+.map-ctrl-btn:hover {
+  background: rgba(255,255,255,.2);
+}
+
+/* =========================================================
+   DETAIL SCORE CARDS
+========================================================= */
+
+.detail-card {
+  flex: 1;
+
+  background:
+    linear-gradient(
+      135deg,
+      #100e18,
+      #0d0b14
+    );
+
+  border: 1px solid #282239;
+
+  border-radius: 9px;
+
+  padding: 9px 11px;
+}
+
+.detail-card .small {
+  font-size: 9.5px;
+
+  color: #91899f;
+
+  text-transform: uppercase;
+
+  letter-spacing: .4px;
+}
+
+.detail-card .big {
+  font-family: 'JetBrains Mono';
+
+  font-weight: 700;
+
+  font-size: 16px;
+
+  margin-top: 3px;
+
+  color: #f4efff;
+}
+
+.detail-card .hint {
+  font-size: 9px;
+
+  color: #777183;
+
+  margin-top: 2px;
+}
+
+/* =========================================================
+   SATELLITE MAP
+========================================================= */
+
+#sat-map {
+  background: #050508;
+}
+
+/* =========================================================
+   MARKER CLUSTER
+========================================================= */
+
+.marker-cluster {
+  background: transparent !important;
+}
+
+.marker-cluster div {
+  background: transparent !important;
+}
+
+/* =========================================================
+   BOTTOM SHEET (touch layouts)
+
+   On phones the feed is not a column beside the map -- it is a
+   sheet over it. Two modes share the same DOM:
+
+     mode-list   full-screen list of reported cases
+     mode-detail draggable card, snapped to mid or full
+
+   Position is driven by one custom property (--sheet-y) that JS
+   writes on every animation frame while dragging, so the drag is
+   a single compositor-only transform with no layout work.
+========================================================= */
+
+#sheet-grabber {
+  display: none;
+
+  padding: 10px 0 6px;
+
+  flex-shrink: 0;
+
+  cursor: grab;
+
+  touch-action: none;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+#sheet-grabber span {
+  display: block;
+
+  width: 42px;
+  height: 4px;
+
+  margin: 0 auto;
+
+  border-radius: 999px;
+
+  background: #3a3252;
+}
+
+#sheet-backdrop {
+  display: none;
+
+  position: fixed;
+  inset: 0;
+
+  z-index: 1300;
+
+  background: rgba(4,3,9,.55);
+
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+
+  opacity: 0;
+
+  /*
+    The element stays mounted so its opacity can transition, which
+    means an invisible full-screen div sits over the entire app
+    whenever the sheet is down. Without this it swallows every tap
+    on the header, the map and the layers button.
+  */
+  pointer-events: none;
+  visibility: hidden;
+
+  transition: opacity .28s ease, visibility 0s linear .28s;
+}
+
+#sheet-backdrop.show {
+  opacity: 1;
+
+  pointer-events: auto;
+  visibility: visible;
+
+  transition: opacity .28s ease, visibility 0s;
+}
+
+@media (max-width: 900px), (pointer: coarse) and (max-width: 1100px) {
+
+  body {
+    display: flex;
+    flex-direction: column;
+
+    overscroll-behavior: none;
+  }
+
+  /* ---------- header ---------- */
+
+  #topbar {
+    height: auto;
+
+    flex-direction: column;
+    align-items: stretch;
+
+    gap: 10px;
+
+    padding: calc(env(safe-area-inset-top) + 10px) 14px 11px;
+  }
+
+  #brand-row {
+    display: flex;
+    align-items: center;
+
+    gap: 12px;
+  }
+
+  #mark {
+    width: 36px;
+    height: 36px;
+  }
+
+  #logo {
+    font-size: 18px;
+  }
+
+  #tagline {
+    font-size: 10.5px;
+  }
+
+  #live-pill {
+    display: none;
+  }
+
+  #nav-toggle {
+    display: flex;
+    position: relative;
+  }
+
+  #snapshot-badge {
+    font-size: 9px;
+  }
+
+  /* Stats become a compact, swipeable strip under the name. */
+  #stats {
+    margin-left: 0;
+
+    gap: 6px;
+
+    overflow-x: auto;
+
+    scrollbar-width: none;
+  }
+
+  #stats::-webkit-scrollbar {
+    display: none;
+  }
+
+  .stat {
+    flex: 1 1 0;
+
+    /* min-width:auto would let the longest label set the floor and
+       push the fourth tile off-screen. */
+    min-width: 0;
+
+    padding: 7px 8px 7px 10px;
+
+    border-radius: 10px;
+
+    overflow: hidden;
+  }
+
+  .stat .val {
+    font-size: 17px;
+  }
+
+  .stat .lbl {
+    font-size: 8.5px;
+
+    letter-spacing: .3px;
+
+    gap: 5px;
+
+    margin-top: 4px;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #stats .lbl-full  { display: none; }
+  #stats .lbl-short { display: inline; }
+
+  /* ---------- map fills the rest ---------- */
+
+  #layout {
+    flex: 1;
+    height: auto;
+
+    min-height: 0;
+  }
+
+  #map {
+    height: 100%;
+  }
+
+  #resize-handle,
+  #connector-line,
+  #legend {
+    display: none !important;
+  }
+
+  .leaflet-control-zoom {
+    display: none;
+  }
+
+  /* ---------- layers dialog ---------- */
+
+  #fab-layers {
+    display: flex;
+
+    bottom: calc(env(safe-area-inset-bottom) + 18px);
+  }
+
+  #layer-controls {
+    top: auto;
+    left: auto;
+
+    right: 16px;
+    bottom: calc(env(safe-area-inset-bottom) + 76px);
+
+    width: 208px;
+
+    display: none;
+
+    transform-origin: bottom right;
+
+    animation: pop .16s ease-out;
+  }
+
+  #layer-controls.open {
+    display: block;
+  }
+
+  @keyframes pop {
+    from { opacity: 0; transform: scale(.94) translateY(6px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  #layer-controls .mobile-only {
+    display: block;
+  }
+
+  #layer-controls .legend-row {
+    display: flex;
+    align-items: center;
+
+    gap: 8px;
+
+    font-size: 11.5px;
+    color: #ddd8e7;
+
+    margin: 7px 0;
+  }
+
+  /* ---------- sheet ---------- */
+
+  #sheet-backdrop {
+    display: block;
+  }
+
+  #sheet-grabber {
+    display: block;
+  }
+
+  #feed {
+    position: fixed;
+
+    left: 0;
+    right: 0;
+    top: 0;
+
+    width: auto;
+
+    height: 100vh;
+    height: 100dvh;
+
+    z-index: 1400;
+
+    border-left: none;
+    border-top: 1px solid var(--border2);
+
+    border-radius: var(--r-xl) var(--r-xl) 0 0;
+
+    background: linear-gradient(180deg, #0c0a17 0%, #08070e 46%);
+
+    box-shadow: 0 -22px 60px rgba(0,0,0,.6);
+
+    transform: translate3d(0, var(--sheet-y, 100%), 0);
+
+    transition: transform .36s cubic-bezier(.22,1,.36,1);
+
+    will-change: transform;
+  }
+
+  /* While a finger is down the transform follows it frame by frame. */
+  #feed.dragging {
+    transition: none;
+  }
+
+  #feed.mode-list {
+    border-radius: 0;
+  }
+
+  #sheet-close {
+    display: flex;
+  }
+
+  /* Header doubles as a drag surface in list mode. */
+  #feed-header {
+    padding: 12px 16px 10px;
+
+    touch-action: none;
+  }
+
+  /* The sheet covers the corner the layers button lives in. */
+  body.sheet-open #fab-layers {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  #fab-layers {
+    transition: opacity .2s ease;
+  }
+
+  #feed-list {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 28px);
+  }
+
+  #ev-body {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 28px);
+  }
+
+  /* Detail header doubles as a drag surface, so it must not scroll. */
+  #ev-head {
+    padding: 12px 16px 16px;
+
+    touch-action: none;
+  }
+
+  #ev-head .title {
+    font-size: 16px;
+  }
+
+  #ev-controls {
+    flex-wrap: wrap;
+  }
+
+  #ev-close,
+  .map-ctrl-btn {
+    padding: 8px 13px;
+    font-size: 11px;
+  }
+
+  .filter-btn {
+    padding: 9px 14px;
+  }
+
+  #sat-map {
+    height: 210px !important;
+  }
+
+}
+
+/* Desktop keeps the long labels and never mounts the sheet chrome. */
+.lbl-short { display: none; }
+
+</style>
+</head>
+
+<body>
+
+<!-- =======================================================
+     TOP BAR
+======================================================= -->
+
+<div id="topbar">
+
+  <!--
+    Phone layout puts the identity row on top and the counts on a
+    strip beneath it, so the map keeps the rest of the screen.
+  -->
+  <div id="brand-row">
+
+    <div id="brand">
+
+<div id="mark" role="img" aria-label="SATAT logo">
+  <svg viewBox="0 0 40 40" fill="none"
+       xmlns="http://www.w3.org/2000/svg">
+
+    <defs>
+      <linearGradient id="mk-g" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0"   stop-color="#8b5cf6"/>
+        <stop offset="0.55" stop-color="#c0398f"/>
+        <stop offset="1"   stop-color="#ff6a3d"/>
+      </linearGradient>
+    </defs>
+
+    <!-- sensor footprint -->
+    <rect x="1.5" y="1.5" width="37" height="37" rx="10"
+          fill="#120e1c" stroke="url(#mk-g)" stroke-width="1.6"/>
+
+    <!-- industrial skyline -->
+    <path d="M10 28.5 V19.5 l5.4 3.4 V19.5 l5.4 3.4 V16 h4.1 v12.5 Z"
+          fill="url(#mk-g)" fill-opacity=".92"/>
+
+    <!-- stack plume / thermal signature -->
+    <path d="M27.8 15.4 c1.9 1.5 2.8 3.2 2.6 5.1 -.2 1.7-1.3 3-2.9 3.6
+             .7-1.4 .6-2.7-.4-3.9 -.2 1.3-.8 2.2-1.9 2.8 .5-2.7 .2-5-2.1-7.6
+             1.3 .1 2.3 .5 3 1.3 .3-1.2 .1-2.3-.6-3.4 1 .5 1.8 1.2 2.3 2.1Z"
+          fill="#ffb347"/>
+
+    <!-- orbital pass -->
+    <path d="M4.5 12.5 C13 6.5 27 6.5 35.5 12.5"
+          stroke="url(#mk-g)" stroke-width="1.5"
+          stroke-linecap="round" opacity=".75"/>
+  </svg>
+</div>
+
+      <div style="min-width:0;">
+        <div id="logo">SATAT</div>
+
+        <div id="tagline">
+          Industrial Thermal Anomaly Detection
+        </div>
+
+        <!--
+          Which data snapshot this instance is serving. FIRMS is a live
+          feed, so two machines that fetched at different times will show
+          different counts; this makes that visible instead of silent.
+        -->
+        <div id="snapshot-badge">-</div>
+      </div>
+
+    </div>
+
+    <div id="live-pill">
+      <span class="pulse"></span>
+      FIRMS feed
+    </div>
+
+    <!-- Opens the full-screen report list on phones. -->
+    <button id="nav-toggle"
+            aria-label="Open reported cases">
+
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M2.5 4.5h13M2.5 9h13M2.5 13.5h13"
+              stroke="currentColor" stroke-width="1.7"
+              stroke-linecap="round"/>
+      </svg>
+
+      <span class="badge" id="nav-count">0</span>
+    </button>
+
+  </div>
+
+  <div id="stats">
+
+    <div class="stat s-fire">
+      <div class="val" id="s-industrial">-</div>
+
+      <div class="lbl">
+        <span class="dot" style="background:#ff465c;color:#ff465c"></span>
+        <span class="lbl-full">Industrial</span>
+        <span class="lbl-short">Fire</span>
+      </div>
+    </div>
+
+    <div class="stat s-persist">
+      <div class="val" id="s-possible">-</div>
+
+      <div class="lbl">
+        <span class="dot" style="background:#ff9d38;color:#ff9d38"></span>
+        <span class="lbl-full">Persistent</span>
+        <span class="lbl-short">Persist</span>
+      </div>
+    </div>
+
+    <div class="stat s-insuff">
+      <div class="val" id="s-other">-</div>
+
+      <div class="lbl">
+        <span class="dot" style="background:#89869d;color:#89869d"></span>
+        <span class="lbl-full">Insufficient Evidence</span>
+        <span class="lbl-short">Unclear</span>
+      </div>
+    </div>
+
+    <div class="stat s-total">
+      <div class="val" id="s-total">-</div>
+
+      <div class="lbl">
+        <span class="lbl-full">Total Detections</span>
+        <span class="lbl-short">Total</span>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+
+<div id="connector-line"></div>
+
+
+<!-- Dims the map while the sheet is raised. -->
+<div id="sheet-backdrop"></div>
+
+
+<div id="layout">
+
+  <div id="map">
+
+    <div id="layer-controls">
+
+      <div class="title">
+        Basemap
+      </div>
+
+      <div class="btn-row">
+
+        <button data-basemap="dark"
+                class="active"
+                onclick="setBasemap('dark')">
+          Dark
+        </button>
+
+        <button data-basemap="satellite"
+                onclick="setBasemap('satellite')">
+          Satellite
+        </button>
+
+      </div>
+
+      <div class="title spaced">
+        Overlays
+      </div>
+
+      <div class="stack">
+
+        <button data-overlay="heat"
+                onclick="toggleOverlay(
+                  'heat',
+                  !this.classList.contains('active')
+                )">
+          Thermal Density
+        </button>
+
+        <button data-overlay="gibs"
+                onclick="toggleOverlay(
+                  'gibs',
+                  !this.classList.contains('active')
+                )">
+          NASA VIIRS Imagery
+        </button>
+
+      </div>
+
+      <!--
+        On phones the standalone legend card would cover the map,
+        so the same key lives inside this dialog instead.
+      -->
+      <div class="mobile-only">
+
+        <div class="title spaced">
+          Classification
+        </div>
+
+        <div class="legend-row">
+          <span class="dot" style="background:#ff465c;color:#ff465c"></span>
+          Industrial Fire
+        </div>
+
+        <div class="legend-row">
+          <span class="dot" style="background:#ff9d38;color:#ff9d38"></span>
+          Persistent Source
+        </div>
+
+        <div class="legend-row">
+          <span class="dot" style="background:#89869d;color:#89869d"></span>
+          Insufficient evidence
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div id="legend">
+
+      <div class="title">
+        Classification
+      </div>
+
+      <div class="row">
+        <span class="dot" style="background:#ff465c;color:#ff465c"></span>
+        Industrial Fire
+      </div>
+
+      <div class="row">
+        <span class="dot" style="background:#ff9d38;color:#ff9d38"></span>
+        Persistent Industrial Source
+      </div>
+
+      <div class="row">
+        <span class="dot" style="background:#89869d;color:#89869d"></span>
+        Insufficient evidence
+      </div>
+
+    </div>
+
+
+    <!-- Touch-only entry point to the basemap / overlay dialog. -->
+    <button id="fab-layers"
+            aria-label="Map layers">
+
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <path d="M10 2.7 2.8 6.5 10 10.3l7.2-3.8L10 2.7Z"
+              stroke="currentColor" stroke-width="1.5"
+              stroke-linejoin="round"/>
+        <path d="M3.4 10.4 10 13.9l6.6-3.5M3.4 14 10 17.5l6.6-3.5"
+              stroke="currentColor" stroke-width="1.5"
+              stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+
+    </button>
+
+  </div>
+
+
+  <div id="resize-handle">
+
+    <svg width="14"
+         height="20"
+         viewBox="0 0 14 20"
+         fill="none">
+
+      <path
+        d="M5 4L1 10L5 16"
+        stroke="#89869d"
+        stroke-width="1.6"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+
+      <path
+        d="M9 4L13 10L9 16"
+        stroke="#89869d"
+        stroke-width="1.6"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+
+    </svg>
+
+  </div>
+
+
+  <div id="feed">
+
+    <!-- Drag surface for the sheet on touch layouts. -->
+    <div id="sheet-grabber"><span></span></div>
+
+    <div id="list-view"
+         style="display:flex;flex-direction:column;height:100%;">
+
+      <div id="feed-header">
+
+        <div style="min-width:0;">
+
+        <h2>
+          Recent FIRMS Detections
+        </h2>
+
+        <div class="sub" id="feed-sub">
+          Ranked by investigation priority · tap any event for evidence
+        </div>
+
+      </div>
+
+      <button id="sheet-close"
+              aria-label="Close list">&times;</button>
+
+      </div>
+
+
+      <div id="filters">
+
+        <button class="filter-btn active"
+                data-f="all">
+          All
+        </button>
+
+        <button class="filter-btn"
+                data-f="industrial_fire">
+          Industrial Fire
+        </button>
+
+        <button class="filter-btn"
+                data-f="persistent_industrial_source">
+          Persistent
+        </button>
+
+        <button class="filter-btn"
+                data-f="insufficient_evidence">
+          Insufficient
+        </button>
+
+      </div>
+
+
+      <div id="sortrow">
+
+        <span class="sortrow-label">
+          Sort by
+        </span>
+
+        <button class="filter-btn sort-btn active"
+                data-s="risk">
+          Investigation Priority
+        </button>
+
+        <button class="filter-btn sort-btn"
+                data-s="fusion">
+          Fusion Score
+        </button>
+
+      </div>
+
+
+      <div id="feed-list"></div>
+
+    </div>
+
+
+    <div id="detail-view"
+         style="display:none;">
+
+      <div id="ev-head">
+
+        <div id="ev-controls">
+
+          <button id="ev-close"
+                  onclick="closePanel()">
+            ← Back to list
+          </button>
+
+          <button class="map-ctrl-btn"
+                  onclick="resetMapView()">
+            Reset Map
+          </button>
+
+          <button class="map-ctrl-btn"
+                  onclick="zoomToCurrentDetection()">
+            Zoom to Detection
+          </button>
+
+        </div>
+
+
+        <div class="tag"
+             id="ev-tag">
+          Event
+        </div>
+
+        <div class="title"
+             id="ev-title">
+          —
+        </div>
+
+        <div class="score"
+             id="ev-score">
+          —
+        </div>
+
+      </div>
+
+
+      <div id="ev-body">
+
+        <div id="ev-contributors"></div>
+
+
+        <div id="raw-signals-title"
+             class="ev-section-title">
+          Raw Signals
+        </div>
+
+        <div id="ev-signals"></div>
+
+
+        <div id="sat-context-title"
+             class="ev-section-title">
+          Satellite / Map Context
+        </div>
+
+        <div id="sat-caption"
+             style="
+               font-size:10.5px;
+               color:#91899f;
+               margin-bottom:6px;
+             ">
+        </div>
+
+        <div id="sat-map"
+             style="
+               height:180px;
+               width:100%;
+               box-sizing:border-box;
+               border-radius:8px;
+               overflow:hidden;
+               border:1px solid #2b2438;
+             ">
+        </div>
+
+        <div id="sat-note"
+             style="
+               font-size:10.5px;
+               color:#91899f;
+               margin-top:6px;
+               line-height:1.4;
+             ">
+        </div>
+
+
+        <div id="ev-note"></div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<script src="/static/vendor/leaflet.js"></script>
+
+<script src="/static/vendor/leaflet.markercluster.js"></script>
+
+<script src="/static/vendor/turf.min.js"></script>
+
+<!-- thermal density overlay -->
+<script src="/static/vendor/leaflet-heat.js"></script>
+
+
+<script>
+
+/* =========================================================
+   MAP
+========================================================= */
+
+const map = L.map('map', {
+  zoomControl: false
+}).setView([22.5,79],5);
+
+
+/* =========================================================
+   CONNECTOR
+========================================================= */
+
+function updateConnector() {
+
+  const line =
+    document.getElementById('connector-line');
+
+  if (
+    window.selectedMarkerIdx === null ||
+    document.getElementById('detail-view')
+      .style.display === 'none'
+  ) {
+
+    line.style.display = 'none';
+    return;
+  }
+
+  const d =
+    window.dataById[window.selectedMarkerIdx];
+
+  if (!d) {
+    line.style.display = 'none';
+    return;
+  }
+
+  const mapRect =
+    document.getElementById('map')
+      .getBoundingClientRect();
+
+  const point =
+    map.latLngToContainerPoint([
+      d.latitude,
+      d.longitude
+    ]);
+
+  const screenX =
+    mapRect.left + point.x;
+
+  const screenY =
+    mapRect.top + point.y;
+
+  const distToBoundary =
+    mapRect.right - screenX;
+
+  const THRESHOLD = 160;
+
+  if (
+    screenY < mapRect.top ||
+    screenY > mapRect.bottom ||
+    distToBoundary > THRESHOLD ||
+    distToBoundary < 0
+  ) {
+
+    line.style.display = 'none';
+    return;
+  }
+
+  line.style.display = 'block';
+
+  line.style.left =
+    screenX + 'px';
+
+  line.style.top =
+    (screenY - .75) + 'px';
+
+  line.style.width =
+    (mapRect.right - screenX) + 'px';
+}
+
+map.on(
+  'move zoom',
+  updateConnector
+);
+
+window.addEventListener(
+  'resize',
+  updateConnector
+);
+
+
+/* =========================================================
+   DARK MAP
+========================================================= */
+
+map.fitBounds([
+  [6.5,66.5],
+  [36.5,92.5]
+]);
+
+map.setMaxBounds([
+  [0,55],
+  [42,105]
+]);
+
+L.control.zoom({
+  position:'topright'
+}).addTo(map);
+
+
+/*
+  FIXED: CARTO's basemaps.cartocdn.com dark_all tiles now require
+  an API key even for anonymous/free use (CARTO deprecated the old
+  no-key tier) — this was showing "API KEY REQUIRED" watermarks over
+  the whole map, especially on hosted deploys. Switched to Esri's
+  Dark Gray Canvas, no key required — same source already used
+  successfully for the per-detection satellite thumbnail below.
+*/
+
+const darkBasemap = L.tileLayer(
+  'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+  {
+    attribution: '© Esri, HERE, Garmin, © OpenStreetMap contributors',
+    maxZoom: 20,
+    maxNativeZoom: 16
+  }
+).addTo(map);
+
+
+/*
+  Esri World Imagery: true satellite view, so a detection can be
+  checked against what is physically on the ground (plant, flare
+  stack, field). Same source as the per-detection thumbnail.
+*/
+const satelliteBasemap = L.tileLayer(
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  {
+    attribution: '© Esri, Maxar, Earthstar Geographics',
+    maxZoom: 20,
+    maxNativeZoom: 18
+  }
+);
+
+
+/*
+  NASA GIBS VIIRS corrected reflectance: the actual satellite view of
+  India for the most recent detection date, same imagery family the
+  FIRMS detections are derived from. No API key required.
+*/
+function gibsUrl(date) {
+
+  return 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/' +
+    'VIIRS_NOAA20_CorrectedReflectance_TrueColor/default/' +
+    date +
+    '/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg';
+
+}
+
+
+/*
+  Placeholder date; replaced with the snapshot's last detection day
+  once /api/stats responds, so the imagery always matches the data
+  being shown rather than drifting as the snapshot is refreshed.
+*/
+const gibsOverlay = L.tileLayer(
+  gibsUrl('2026-08-28'),
+  {
+    attribution: 'NASA EOSDIS GIBS',
+    maxZoom: 20,
+    maxNativeZoom: 8,
+    opacity: 0.75
+  }
+);
+
+
+/* =========================================================
+   THERMAL DENSITY LAYER
+   Where is thermal activity concentrated, independent of
+   how the individual points happen to cluster.
+========================================================= */
+
+let heatLayer = null;
+
+function buildHeatLayer(rows) {
+
+  const points =
+    rows.map(d => {
+
+      /*
+        Weight by FRP so a strong fire outweighs several weak
+        ones. Capped so a single extreme value cannot wash out
+        the rest of the map.
+      */
+      const weight =
+        Math.min(
+          (Number(d.frp) || 0) / 50,
+          1
+        );
+
+      return [
+        d.latitude,
+        d.longitude,
+        Math.max(weight, 0.15)
+      ];
+
+    });
+
+
+  heatLayer =
+    L.heatLayer(points, {
+
+      radius: 22,
+
+      blur: 18,
+
+      maxZoom: 9,
+
+      minOpacity: 0.28,
+
+      gradient: {
+        0.2: '#3b1d5e',
+        0.4: '#a4308a',
+        0.6: '#ff465c',
+        0.8: '#ff9d38',
+        1.0: '#ffe98a'
+      }
+
+    });
+
+}
+
+
+/*
+  Rebuild the density layer for a new row set, keeping it on the
+  map only if it was already showing. Without the visibility
+  check, scrubbing the date window would silently switch the
+  overlay on while its button still read "off".
+*/
+function rebuildHeat(rows) {
+
+  const wasVisible =
+    heatLayer && map.hasLayer(heatLayer);
+
+
+  if (wasVisible)
+    map.removeLayer(heatLayer);
+
+
+  buildHeatLayer(rows);
+
+
+  if (wasVisible)
+    heatLayer.addTo(map);
+
+}
+
+
+/* =========================================================
+   VISIBLE ROWS
+
+   Single source of truth for "what is currently on screen".
+   The snapshot is a short fixed window (see README), so every
+   surface -- map, density layer, feed, header counts -- reads
+   the same full row set. Date scrubbing was removed; when the
+   feed becomes live this is the one place that needs to learn
+   about a window again.
+========================================================= */
+
+function visibleData() {
+  return allData.slice();
+}
+
+
+/*
+  Re-render every surface from the current row set.
+*/
+function refreshAll() {
+
+  const rows = visibleData();
+
+  renderMarkers(rows);
+  rebuildHeat(rows);
+  updateStatsFromRows(rows);
+
+  const activeFilter =
+    document.querySelector(
+      '.filter-btn.active:not(.sort-btn)'
+    );
+
+  renderFeed(
+    activeFilter
+      ? activeFilter.dataset.f
+      : 'all'
+  );
+
+}
+
+
+/*
+  Header counts are derived from the rows actually on screen
+  rather than from /api/stats, which always describes the whole
+  snapshot. Otherwise narrowing the window would leave the
+  header claiming detections the map is no longer showing.
+*/
+function updateStatsFromRows(rows) {
+
+  const count =
+    label =>
+      rows.filter(
+        d => d.final_label === label
+      ).length;
+
+
+  document.getElementById('s-industrial').textContent =
+    count('industrial_fire');
+
+  document.getElementById('s-possible').textContent =
+    count('persistent_industrial_source');
+
+  document.getElementById('s-other').textContent =
+    count('insufficient_evidence');
+
+  document.getElementById('s-total').textContent =
+    rows.length;
+
+}
+
+
+/* =========================================================
+   LAYER SWITCHING
+========================================================= */
+
+function setBasemap(kind) {
+
+  [darkBasemap, satelliteBasemap].forEach(
+    layer => {
+      if (map.hasLayer(layer))
+        map.removeLayer(layer);
+    }
+  );
+
+  const chosen =
+    kind === 'satellite'
+      ? satelliteBasemap
+      : darkBasemap;
+
+  chosen.addTo(map);
+  chosen.bringToBack();
+
+  document
+    .querySelectorAll('[data-basemap]')
+    .forEach(
+      btn =>
+        btn.classList.toggle(
+          'active',
+          btn.dataset.basemap === kind
+        )
+    );
+
+}
+
+
+function toggleOverlay(kind, on) {
+
+  const layer =
+    kind === 'gibs'
+      ? gibsOverlay
+      : heatLayer;
+
+  if (!layer)
+    return;
+
+  if (on) {
+
+    layer.addTo(map);
+
+    if (kind === 'gibs')
+      gibsOverlay.bringToFront();
+
+  } else {
+
+    map.removeLayer(layer);
+
+  }
+
+  const btn =
+    document.querySelector(
+      '[data-overlay="' + kind + '"]'
+    );
+
+  if (btn)
+    btn.classList.toggle('active', on);
+
+}
+
+/* =========================================================
+   COLORS
+========================================================= */
+
+const colors = {
+
+  industrial_fire:
+    '#ff465c',
+
+  persistent_industrial_source:
+    '#ff9d38',
+
+  insufficient_evidence:
+    '#89869d'
+
+};
+
+
+const labelNames = {
+
+  industrial_fire:
+    'Industrial Fire',
+
+  persistent_industrial_source:
+    'Persistent Industrial Source',
+
+  insufficient_evidence:
+    'Insufficient Evidence'
+
+};
+
+
+let allData = [];
+
+let currentSort = 'risk';
+
+
+/* =========================================================
+   PRIORITY COLORS
+========================================================= */
+
+const riskColors = {
+
+  Urgent:
+    '#ff465c',
+
+  High:
+    '#ff7a32',
+
+  Moderate:
+    '#ff9d38',
+
+  Low:
+    '#89869d'
+
+};
+
+
+function priorityTier(score) {
+
+  if (score >= .90)
+    return 'Urgent';
+
+  if (score >= .70)
+    return 'High';
+
+  if (score >= .40)
+    return 'Moderate';
+
+  return 'Low';
+
+}
+
+
+function fusionTier(score) {
+
+  if (score >= .6)
+    return 'High';
+
+  if (score >= .3)
+    return 'Moderate';
+
+  return 'Low';
+
+}
+
+
+/* =========================================================
+   STATS
+========================================================= */
+
+fetch('/api/stats')
+.then(r => r.json())
+.then(s => {
+
+  /*
+    Header counts are NOT set here. This response describes the
+    whole snapshot, while the header tracks the observation
+    window -- updateStatsFromRows() owns those four numbers so
+    the two cannot race and disagree. This handler only supplies
+    provenance and the imagery date.
+  */
+
+  const range =
+    s.date_range
+      ? s.date_range[0] + ' → ' + s.date_range[1]
+      : 'unknown range';
+
+
+  /*
+    Point the NASA imagery at the snapshot's most recent
+    detection day.
+  */
+  if (s.date_range && s.date_range[1])
+    gibsOverlay.setUrl(
+      gibsUrl(s.date_range[1])
+    );
+
+  document.getElementById(
+    'snapshot-badge'
+  ).textContent =
+    'snapshot ' +
+    (s.snapshot_id || 'unknown') +
+    ' · ' +
+    range +
+    ' · build ' +
+    (s.build || 'unknown');
+
+});
+
+
+let currentOpenDetection = null;
+
+
+/* =========================================================
+   CLUSTER PANEL
+========================================================= */
+
+function openClusterPanel(c) {
+
+  window.selectedMarkerIdx = null;
+
+  if (window.glowMarker) {
+
+    map.removeLayer(
+      window.glowMarker
+    );
+
+    window.glowMarker = null;
+  }
+
+  document.getElementById(
+    'connector-line'
+  ).style.display = 'none';
+
+  document.getElementById(
+    'list-view'
+  ).style.display = 'none';
+
+  document.getElementById(
+    'detail-view'
+  ).style.display = 'flex';
+
+  currentOpenDetection = null;
+
+  window.currentOpenCluster = c;
+
+  const color =
+    clusterLabelColors[
+      c.dominant_label
+    ] || '#89869d';
+
+  const head =
+    document.getElementById('ev-head');
+
+  head.className = '';
+
+  if (
+    c.dominant_label ===
+    'industrial_fire'
+  ) {
+    head.classList.add('industrial');
+
+  } else if (
+    c.dominant_label ===
+    'persistent_industrial_source'
+  ) {
+    head.classList.add('persistent');
+
+  } else {
+    head.classList.add('insufficient');
+  }
+
+
+  document.getElementById(
+    'ev-tag'
+  ).textContent =
+    `THERMAL EVENT CLUSTER · ${
+      labelNames[c.dominant_label]
+    }`.toUpperCase();
+
+
+  document.getElementById(
+    'ev-title'
+  ).textContent =
+    `${c.count} detections · ${
+      c.centroid_lat.toFixed(4)
+    }, ${
+      c.centroid_lon.toFixed(4)
+    }`;
+
+
+  const clusterPoints =
+    allData.filter(
+      d => d.cluster_id === c.cluster_id
+    );
+
+
+  const breakdown = {
+
+    industrial_fire:0,
+
+    persistent_industrial_source:0,
+
+    insufficient_evidence:0
+
+  };
+
+
+  clusterPoints.forEach(d => {
+
+    breakdown[d.final_label] =
+      (breakdown[d.final_label] || 0) + 1;
+
+  });
+
+
+  const breakdownHtml =
+    Object.entries(breakdown)
+
+    .filter(
+      ([k,v]) => v > 0
+    )
+
+    .map(
+      ([k,v]) => `
+        <div class="ev-row">
+          <span>${labelNames[k]}</span>
+
+          <span
+            class="amt"
+            style="width:auto">
+            ${v}
+          </span>
+        </div>
+      `
+    )
+    .join('');
+
+
+  const rows = [
+
+    [
+      'Detection span',
+      `${c.first_date} → ${c.last_date}`
+    ],
+
+    [
+      'Persistence',
+      c.persistence_days + ' days'
+    ],
+
+    [
+      'Maximum FRP',
+      c.max_frp + ' MW'
+    ],
+
+    [
+      'Average FRP',
+      c.avg_frp + ' MW'
+    ],
+
+    [
+      'Highest Investigation Priority',
+      c.max_priority
+    ],
+
+    [
+      'Highest Fusion Score',
+      c.max_fusion
+    ],
+
+    [
+      'Industrial context',
+      c.industrial_context
+    ],
+
+    [
+      'Nearest facility',
+      c.nearest_facility_name
+    ],
+
+    [
+      'Facility type',
+      c.nearest_facility_type
+    ],
+
+    [
+      'Distance to facility',
+      c.dist_to_industrial_km + ' km'
+    ]
+
+  ];
+
+
+  document.getElementById(
+    'ev-contributors'
+  ).innerHTML =
+
+    `<div style="
+      font-size:11.5px;
+      color:#9b94a8;
+      margin-bottom:10px;
+      line-height:1.45;
+    ">
+      This groups ${c.count}
+      individual FIRMS detections that
+      occurred within 3km and 5 days of
+      each other into one thermal event,
+      based on spatial-temporal clustering.
+    </div>`
+
+    +
+
+    `<div class="ev-section-title"
+          style="margin-top:0">
+      Cluster Summary
+    </div>`
+
+    +
+
+    breakdownHtml
+
+    +
+
+    rows.map(r => `
+      <div class="ev-row">
+        <span>${r[0]}</span>
+        <span
+          class="amt"
+          style="width:auto">
+          ${r[1]}
+        </span>
+      </div>
+    `).join('')
+
+    +
+
+    `
+      <button
+        onclick="zoomToCluster()"
+        style="
+          margin-top:14px;
+          width:100%;
+          padding:9px;
+
+          background:
+            linear-gradient(
+              135deg,
+              #35106d,
+              #5d1cad
+            );
+
+          color:#fff;
+
+          border:1px solid #7c3aed;
+
+          border-radius:8px;
+
+          font-size:12px;
+          font-weight:600;
+
+          cursor:pointer;
+        ">
+        Zoom in to view
+        ${c.count}
+        individual detections
+      </button>
+    `;
+
+
+  document.getElementById(
+    'ev-signals'
+  ).innerHTML = '';
+
+  document.getElementById(
+    'raw-signals-title'
+  ).style.display = 'none';
+
+  document.getElementById(
+    'sat-context-title'
+  ).style.display = 'none';
+
+  document.getElementById(
+    'sat-caption'
+  ).style.display = 'none';
+
+  document.getElementById(
+    'sat-map'
+  ).style.display = 'none';
+
+  document.getElementById(
+    'sat-note'
+  ).style.display = 'none';
+
+
+  if (window.satMapInstance) {
+
+    window.satMapInstance.remove();
+
+    window.satMapInstance = null;
+
+  }
+
+  document.getElementById(
+    'ev-note'
+  ).textContent = '';
+
+}
+
+
+function zoomToCluster() {
+
+  const c =
+    window.currentOpenCluster;
+
+  if (!c)
+    return;
+
+  const clusterPoints =
+    allData.filter(
+      d => d.cluster_id === c.cluster_id
+    );
+
+  if (clusterPoints.length) {
+
+    const bounds =
+      L.latLngBounds(
+        clusterPoints.map(
+          d => [
+            d.latitude,
+            d.longitude
+          ]
+        )
+      );
+
+    map.flyToBounds(
+      bounds.pad(.5),
+      {
+        duration:.6,
+        maxZoom:13
+      }
+    );
+  }
+}
+
+
+/* =========================================================
+   RESIZABLE SIDEBAR
+========================================================= */
+
+(function() {
+
+  const handle =
+    document.getElementById(
+      'resize-handle'
+    );
+
+  const feed =
+    document.getElementById('feed');
+
+  const MIN_WIDTH = 300;
+
+  const MAX_WIDTH = 700;
+
+  let dragging = false;
+
+  let startX = 0;
+
+  let startWidth = 0;
+
+
+  handle.addEventListener(
+    'mousedown',
+    e => {
+
+      dragging = true;
+
+      startX = e.clientX;
+
+      startWidth =
+        feed.getBoundingClientRect().width;
+
+      handle.classList.add(
+        'dragging'
+      );
+
+      document.body.style.userSelect =
+        'none';
+
+    }
+  );
+
+
+  window.addEventListener(
+    'mousemove',
+    e => {
+
+      if (!dragging)
+        return;
+
+      const delta =
+        startX - e.clientX;
+
+      let newWidth =
+        startWidth + delta;
+
+      newWidth =
+        Math.max(
+          MIN_WIDTH,
+          Math.min(
+            MAX_WIDTH,
+            newWidth
+          )
+        );
+
+      feed.style.width =
+        newWidth + 'px';
+
+      map.invalidateSize();
+
+      if (window.satMapInstance)
+        window.satMapInstance.invalidateSize();
+
+      updateConnector();
+
+    }
+  );
+
+
+  window.addEventListener(
+    'mouseup',
+    () => {
+
+      if (!dragging)
+        return;
+
+      dragging = false;
+
+      handle.classList.remove(
+        'dragging'
+      );
+
+      document.body.style.userSelect =
+        '';
+
+      map.invalidateSize();
+
+      if (window.satMapInstance)
+        window.satMapInstance.invalidateSize();
+
+      updateConnector();
+
+    }
+  );
+
+})();
+
+
+/* =========================================================
+   MAP CONTROLS
+========================================================= */
+
+function resetMapView() {
+
+  map.flyToBounds(
+    [
+      [6.5,66.5],
+      [36.5,92.5]
+    ],
+    {
+      duration:.6
+    }
+  );
+
+}
+
+
+function zoomToCurrentDetection() {
+
+  if (currentOpenDetection) {
+
+    map.flyTo(
+      [
+        currentOpenDetection.latitude,
+        currentOpenDetection.longitude
+      ],
+
+      12,
+
+      {
+        duration:.5
+      }
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   OPEN DETECTION PANEL
+========================================================= */
+
+function openPanel(d) {
+
+  currentOpenDetection = d;
+
+  window.currentOpenCluster = null;
+
+
+  document.getElementById(
+    'raw-signals-title'
+  ).style.display = 'block';
+
+  document.getElementById(
+    'sat-context-title'
+  ).style.display = 'block';
+
+  document.getElementById(
+    'sat-caption'
+  ).style.display = 'block';
+
+  document.getElementById(
+    'sat-map'
+  ).style.display = 'block';
+
+  document.getElementById(
+    'sat-note'
+  ).style.display = 'block';
+
+  document.getElementById(
+    'list-view'
+  ).style.display = 'none';
+
+  document.getElementById(
+    'detail-view'
+  ).style.display = 'flex';
+
+
+  if (window.SheetUI && SheetUI.isMobile()) {
+
+    /*
+      Phones get the opposite behaviour from desktop: the point of
+      opening an event there IS to go look at it, and the sheet
+      covers the lower half, so the map zooms in and offsets the
+      detection into the visible upper band.
+    */
+    SheetUI.focusDetection(d);
+    SheetUI.openDetail();
+
+  } else {
+
+    const currentZoom =
+      map.getZoom();
+
+    const currentBounds =
+      map.getBounds().pad(-.2);
+
+    const markerLatLng =
+      L.latLng(
+        d.latitude,
+        d.longitude
+      );
+
+    if (
+      !currentBounds.contains(
+        markerLatLng
+      )
+    ) {
+
+      map.panTo(
+        [
+          d.latitude,
+          d.longitude
+        ],
+        {
+          duration:.5
+        }
+      );
+
+    }
+
+    console.assert(
+      map.getZoom() === currentZoom,
+      'Zoom level must not change'
+    );
+
+  }
+
+
+  const head =
+    document.getElementById(
+      'ev-head'
+    );
+
+  head.className = '';
+
+
+  if (
+    d.final_label ===
+    'industrial_fire'
+  ) {
+
+    head.classList.add(
+      'industrial'
+    );
+
+  }
+
+  else if (
+    d.final_label ===
+    'persistent_industrial_source'
+  ) {
+
+    head.classList.add(
+      'persistent'
+    );
+
+  }
+
+  else {
+
+    head.classList.add(
+      'insufficient'
+    );
+
+  }
+
+
+  const color =
+    colors[d.final_label];
+
+  const tier =
+    priorityTier(
+      d.risk_score
+    );
+
+
+  document.getElementById(
+    'ev-tag'
+  ).textContent =
+    `${tier.toUpperCase()} PRIORITY · ${
+      labelNames[d.final_label]
+    }`.toUpperCase();
+
+
+  document.getElementById(
+    'ev-title'
+  ).textContent =
+    `${d.latitude.toFixed(4)}, ${
+      d.longitude.toFixed(4)
+    }`;
+
+
+  document.getElementById(
+    'ev-score'
+  ).textContent =
+    `Investigation Priority ${d.risk_score.toFixed(2)}`;
+
+
+  const riskFactors = [
+
+    [
+      'Thermal abnormality (vs local baseline)',
+      d.thermal_abnormality,
+      1
+    ],
+
+    [
+      'Persistence (days observed / 5)',
+      d.persistence_norm,
+      1
+    ],
+
+    [
+      'Thermal intensity (FRP percentile)',
+      d.frp_intensity_norm,
+      1
+    ]
+
+  ];
+
+
+  document.getElementById(
+    'ev-contributors'
+  ).innerHTML = `
+
+    <div style="
+      display:flex;
+      gap:8px;
+      margin-bottom:14px;
+    ">
+
+      <div class="detail-card">
+
+        <div class="small">
+          Investigation Priority
+        </div>
+
+        <div class="big">
+          ${d.risk_score.toFixed(2)}
+
+          <span style="
+            font-size:11px;
+            color:${riskColors[tier]};
+          ">
+            ${tier.toUpperCase()}
+          </span>
+        </div>
+
+        <div class="hint">
+          Investigate first?
+        </div>
+
+      </div>
+
+
+      <div class="detail-card">
+
+        <div class="small">
+          Industrial Evidence
+        </div>
+
+        <div class="big">
+
+          ${d.industrial_evidence_score.toFixed(2)}
+
+          <span style="
+            font-size:11px;
+            color:${color};
+          ">
+            ${(d.evidence_level || 'N/A').toUpperCase()}
+          </span>
+
+        </div>
+
+        <div class="hint">
+          Industrial evidence?
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div class="ev-section-title"
+         style="margin-top:0">
+
+      Investigation Priority —
+      Why Investigate First?
+
+    </div>
+
+
+    ${riskFactors.map(c => `
+
+      <div class="ev-row">
+
+        <span>
+          ${c[0]}
+        </span>
+
+        <div class="bar-bg">
+
+          <div
+            class="bar-fill"
+            style="
+              width:${(
+                c[1] / c[2] * 100
+              ).toFixed(0)}%;
+              background:${riskColors[tier]};
+            ">
+          </div>
+
+        </div>
+
+        <span class="amt">
+          ${c[1].toFixed(2)}
+        </span>
+
+      </div>
+
+    `).join('')}
+
+
+    <div style="
+      font-size:11.5px;
+      color:#938ca1;
+      margin-top:8px;
+      line-height:1.45;
+    ">
+
+      Priority = equal-weighted average of
+      thermal abnormality, persistence, and
+      FRP percentile rank.
+
+      Spatial growth and facility-criticality
+      are not yet included.
+
+    </div>
+
+
+    <div style="
+      font-family:'JetBrains Mono';
+      font-size:11px;
+
+      background:#11101a;
+
+      border:1px solid #292238;
+
+      border-radius:6px;
+
+      padding:8px 10px;
+
+      margin-top:7px;
+
+      color:#dcd6e8;
+    ">
+
+      (${d.thermal_abnormality.toFixed(2)}
+      +
+      ${d.persistence_norm.toFixed(2)}
+      +
+      ${d.frp_intensity_norm.toFixed(2)})
+      ÷ 3 =
+
+      <b>
+        ${d.risk_score.toFixed(2)}
+      </b>
+
+    </div>
+
+
+    <div class="ev-section-title">
+
+      Classification Evidence —
+      Why This Category?
+
+    </div>
+
+
+    <div style="
+      font-size:11px;
+      color:#938ca1;
+      margin-bottom:8px;
+      line-height:1.45;
+    ">
+
+      Industrial context (≤5km) is the gate.
+      Persistence decides Industrial Fire vs.
+      Persistent Source.
+
+      Thermal Evidence (ML) does not decide
+      the category it only contributes to
+      Evidence Level.
+
+    </div>
+
+
+    ${
+      [
+        [
+          'Facility proximity',
+          d.facility_proximity_score,
+          .35
+        ],
+
+        [
+          'Thermal persistence',
+          d.persistence_score,
+          .30
+        ],
+
+        [
+          'Thermal Evidence (ML)',
+          d.thermal_intensity_score,
+          .35
+        ]
+
+      ].map(c => `
+
+        <div class="ev-row">
+
+          <span>
+            ${c[0]}
+          </span>
+
+          <div class="bar-bg">
+
+            <div
+              class="bar-fill"
+              style="
+                width:${(
+                  c[1] / c[2] * 100
+                ).toFixed(0)}%;
+                background:${color};
+              ">
+            </div>
+
+          </div>
+
+          <span class="amt">
+            +${c[1].toFixed(2)}
+          </span>
+
+        </div>
+
+      `).join('')
+    }
+
+
+    <div style="
+      font-family:'JetBrains Mono';
+      font-size:11px;
+
+      background:#11101a;
+
+      border:1px solid #292238;
+
+      border-radius:6px;
+
+      padding:8px 10px;
+
+      margin-top:6px;
+
+      color:#dcd6e8;
+    ">
+
+      (
+      ${d.facility_proximity_score.toFixed(2)}
+      +
+      ${d.thermal_intensity_score.toFixed(2)}
+      )
+      ÷ 0.70 =
+
+      <b>
+        ${d.industrial_evidence_score.toFixed(2)}
+        →
+        ${d.evidence_level || 'N/A'}
+      </b>
+
+    </div>
+
+
+    <div style="
+      font-size:10.5px;
+      color:#777183;
+      margin-top:4px;
+    ">
+
+      Evidence Level reflects how strongly
+      the evidence supports this category —
+      it is not a calibrated probability.
+
+    </div>
+
+  `;
+
+
+  const signals = [
+
+    [
+      'Industrial context',
+      d.industrial_context
+    ],
+
+    [
+      'Distance to nearest facility',
+      d.dist_to_industrial_km.toFixed(2)
+      + ' km'
+    ],
+
+    [
+      'Days recurring at this location',
+      d.recurrence_days + ' / 5'
+    ],
+
+    [
+      'Fire Radiative Power (FRP)',
+      d.frp + ' MW'
+    ],
+
+    [
+      'Detection date',
+      d.acq_date
+    ]
+
+  ];
+
+
+  document.getElementById(
+    'ev-signals'
+  ).innerHTML =
+
+    signals.map(s => `
+
+      <div class="ev-row">
+
+        <span>
+          ${s[0]}
+        </span>
+
+        <span
+          class="amt"
+          style="width:auto">
+
+          ${s[1]}
+
+        </span>
+
+      </div>
+
+    `).join('');
+
+
+  const facilityHtml =
+    d.dist_to_industrial_km < 10
+
+    ?
+
+    `
+
+      <div class="ev-row">
+
+        <span>
+          Facility
+        </span>
+
+        <span
+          class="amt"
+          style="width:auto">
+
+          ${d.nearest_facility_name}
+
+        </span>
+
+      </div>
+
+
+      <div class="ev-row">
+
+        <span>
+          Type
+        </span>
+
+        <span
+          class="amt"
+          style="width:auto">
+
+          ${d.nearest_facility_type}
+
+        </span>
+
+      </div>
+
+
+      <div class="ev-row">
+
+        <span>
+          Distance
+        </span>
+
+        <span
+          class="amt"
+          style="width:auto">
+
+          ${d.dist_to_industrial_km.toFixed(2)}
+          km
+
+        </span>
+
+      </div>
+
+
+      <div class="ev-row">
+
+        <span>
+          Source
+        </span>
+
+        <span
+          class="amt"
+          style="width:auto">
+
+          OpenStreetMap
+
+        </span>
+
+      </div>
+
+    `
+
+    :
+
+    `
+
+      <div class="ev-row">
+
+        <span>
+          No relevant facility within range
+        </span>
+
+        <span
+          class="amt"
+          style="width:auto">
+
+          —
+
+        </span>
+
+      </div>
+
+    `;
+
+
+  document.getElementById(
+    'ev-signals'
+  ).innerHTML += `
+
+    <div class="ev-section-title">
+
+      Nearest Industrial Facility
+
+    </div>
+
+    ${facilityHtml}
+
+  `;
+
+
+  document.getElementById(
+    'sat-caption'
+  ).textContent =
+    'Esri World Imagery contextual basemap';
+
+
+  if (window.satMapInstance) {
+
+    window.satMapInstance.remove();
+
+    window.satMapInstance = null;
+
+  }
+
+
+  document.getElementById(
+    'sat-map'
+  ).innerHTML = '';
+
+
+  const satMap =
+    L.map(
+      'sat-map',
+      {
+        zoomControl:false,
+        attributionControl:false,
+        dragging:true,
+        scrollWheelZoom:false
+      }
+    )
+    .setView(
+      [
+        d.latitude,
+        d.longitude
+      ],
+      13
+    );
+
+
+  window.satMapInstance =
+    satMap;
+
+
+  L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    {
+      maxZoom:18
+    }
+  ).addTo(satMap);
+
+
+  L.circleMarker(
+    [
+      d.latitude,
+      d.longitude
+    ],
+    {
+      radius:8,
+      color:'#fff',
+      weight:2,
+      fillColor:color,
+      fillOpacity:1
+    }
+  )
+  .bindTooltip(
+    '🔥 Thermal detection'
+  )
+  .addTo(satMap);
+
+
+  if (
+    d.dist_to_industrial_km < 10
+  ) {
+
+    L.circleMarker(
+      [
+        d.nearest_facility_lat,
+        d.nearest_facility_lon
+      ],
+      {
+        radius:7,
+        color:'#fff',
+        weight:2,
+        fillColor:'#19c38a',
+        fillOpacity:1
+      }
+    )
+    .bindTooltip(
+      '🏭 Nearest mapped facility'
+    )
+    .addTo(satMap);
+
+
+    L.polyline(
+      [
+        [
+          d.latitude,
+          d.longitude
+        ],
+
+        [
+          d.nearest_facility_lat,
+          d.nearest_facility_lon
+        ]
+      ],
+      {
+        color:'#fff',
+        weight:1.5,
+        dashArray:'4,4'
+      }
+    ).addTo(satMap);
+
+
+    const bounds =
+      L.latLngBounds([
+        [
+          d.latitude,
+          d.longitude
+        ],
+
+        [
+          d.nearest_facility_lat,
+          d.nearest_facility_lon
+        ]
+      ]);
+
+
+    satMap.fitBounds(
+      bounds,
+      {
+        padding:[30,30]
+      }
+    );
+
+  }
+
+
+  setTimeout(
+    () => satMap.invalidateSize(),
+    60
+  );
+
+
+  document.getElementById(
+    'sat-note'
+  ).textContent =
+
+    d.dist_to_industrial_km < 10
+
+    ?
+
+    `Spatial relationship: thermal anomaly is ${
+      d.dist_to_industrial_km.toFixed(2)
+    } km from the nearest mapped industrial
+    facility. Imagery date is set by the tile
+    provider and is not tied to the FIRMS
+    detection date shown above.`
+
+    :
+
+    `No mapped industrial facility within
+    10 km satellite context shown for
+    the detection location only. Imagery date
+    is set by the tile provider, not the FIRMS
+    detection date.`;
+
+
+  let note = '';
+
+
+  if (
+    d.final_label ===
+    'insufficient_evidence'
+  ) {
+
+    note =
+      'Classified as insufficient evidence: no known industrial facility within 5km. This does not rule out an industrial source it means current evidence does not support a confident classification.';
+
+  }
+
+  else {
+
+    note =
+      'Investigation Priority = should I look at this first? Category (Industrial Fire / Persistent Source) is decided by the rule-based layer: industrial context (≤5km) is the gate, persistence decides which category. Thermal Evidence (ML) never decides the category it only informs Evidence Level.';
+
+  }
+
+
+  document.getElementById(
+    'ev-note'
+  ).textContent = note;
+
+}
+
+
+/* =========================================================
+   CLOSE PANEL
+========================================================= */
+
+function closePanel() {
+
+  document.getElementById(
+    'detail-view'
+  ).style.display = 'none';
+
+  document.getElementById(
+    'list-view'
+  ).style.display = 'flex';
+
+  document.getElementById(
+    'connector-line'
+  ).style.display = 'none';
+
+  if (window.SheetUI && SheetUI.isMobile())
+    SheetUI.openList();
+
+}
+
+
+/* =========================================================
+   FEED
+========================================================= */
+
+function renderFeed(filter) {
+
+  const feedList =
+    document.getElementById(
+      'feed-list'
+    );
+
+  feedList.innerHTML = '';
+
+
+  /*
+    Reads the observation window, not allData, so the feed lists
+    the same days the map is plotting.
+  */
+  const windowed = visibleData();
+
+
+  let filtered =
+    filter === 'all'
+      ? windowed
+      : windowed.filter(
+          d =>
+            d.final_label === filter
+        );
+
+
+  const sortKey =
+    currentSort === 'risk'
+      ? 'risk_score'
+      : 'fusion_score';
+
+
+  const navCount =
+    document.getElementById('nav-count');
+
+  if (navCount)
+    navCount.textContent = filtered.length;
+
+
+  filtered
+    .sort(
+      (a,b) =>
+        b[sortKey] -
+        a[sortKey]
+    )
+    .slice(0,60)
+    .forEach(d => {
+
+      const item =
+        document.createElement(
+          'div'
+        );
+
+
+      item.className =
+        'feed-item ' +
+        d.final_label;
+
+
+      const tier =
+        priorityTier(
+          d.risk_score
+        );
+
+
+      /*
+        Two numbers, two meanings: Priority answers "look at this
+        first?", Fusion answers "is this industrial?". They are
+        given equal weight in the card so neither is mistaken for
+        the other.
+      */
+      item.innerHTML = `
+
+        <div class="row1">
+
+          <span class="pill"
+                style="background:${riskColors[tier]}">
+            ${tier.toUpperCase()}
+          </span>
+
+          <span class="label">
+            ${labelNames[d.final_label]}
+          </span>
+
+        </div>
+
+
+        <div class="scores">
+
+          <div class="chip">
+            <div class="k">Priority</div>
+            <div class="v">${d.risk_score.toFixed(2)}</div>
+          </div>
+
+          <div class="chip">
+            <div class="k">Fusion</div>
+            <div class="v">${d.fusion_score.toFixed(2)}</div>
+          </div>
+
+        </div>
+
+
+        <div class="meta">
+
+          <b>${d.dist_to_industrial_km.toFixed(1)} km</b>
+          from facility ·
+          recurrence <b>${d.recurrence_days}d</b> ·
+          FRP <b>${d.frp}</b> ·
+          <b>${d.acq_date}</b>
+
+        </div>
+
+      `;
+
+
+      item.addEventListener(
+        'click',
+        () =>
+          selectDetection(d._i)
+      );
+
+
+      feedList.appendChild(item);
+
+    });
+
+}
+
+
+/* =========================================================
+   FILTER BUTTONS
+========================================================= */
+
+document
+  .querySelectorAll(
+    '.filter-btn:not(.sort-btn)'
+  )
+  .forEach(btn => {
+
+    btn.addEventListener(
+      'click',
+      () => {
+
+        document
+          .querySelectorAll(
+            '.filter-btn:not(.sort-btn)'
+          )
+          .forEach(
+            b =>
+              b.classList.remove(
+                'active'
+              )
+          );
+
+
+        btn.classList.add(
+          'active'
+        );
+
+
+        renderFeed(
+          btn.dataset.f
+        );
+
+      }
+    );
+
+  });
+
+
+/* =========================================================
+   SORT BUTTONS
+========================================================= */
+
+document
+  .querySelectorAll(
+    '.sort-btn'
+  )
+  .forEach(btn => {
+
+    btn.addEventListener(
+      'click',
+      () => {
+
+        document
+          .querySelectorAll(
+            '.sort-btn'
+          )
+          .forEach(
+            b =>
+              b.classList.remove(
+                'active'
+              )
+          );
+
+
+        btn.classList.add(
+          'active'
+        );
+
+
+        currentSort =
+          btn.dataset.s;
+
+
+        document.getElementById(
+          'feed-sub'
+        ).textContent =
+
+          currentSort === 'risk'
+
+          ?
+
+          'Ranked by investigation priority · click any event for evidence'
+
+          :
+
+          'Ranked by fusion score · click any event for evidence';
+
+
+        const activeFilter =
+          document.querySelector(
+            '.filter-btn.active:not(.sort-btn)'
+          ).dataset.f;
+
+
+        renderFeed(
+          activeFilter
+        );
+
+      }
+    );
+
+  });
+
+
+/* =========================================================
+   MARKER CLUSTER
+========================================================= */
+
+window.allClusters = [];
+
+const clusterLabelColors = {
+
+  industrial_fire:
+    '#ff465c',
+
+  persistent_industrial_source:
+    '#ff9d38',
+
+  insufficient_evidence:
+    '#89869d'
+
+};
+
+
+window.markerClusterGroup =
+  L.markerClusterGroup({
+
+    spiderfyOnMaxZoom:false,
+
+    showCoverageOnHover:false,
+
+    zoomToBoundsOnClick:false,
+
+    animate:true,
+
+    maxClusterRadius:
+      function(zoom) {
+
+        if (zoom <= 5)
+          return 55;
+
+        if (zoom <= 7)
+          return 45;
+
+        if (zoom <= 9)
+          return 35;
+
+        return 25;
+
+      },
+
+    disableClusteringAtZoom:8,
+
+
+    iconCreateFunction:
+      function(cluster) {
+
+        const children =
+          cluster.getAllChildMarkers();
+
+
+        const counts = {
+
+          industrial_fire:0,
+
+          persistent_industrial_source:0,
+
+          insufficient_evidence:0
+
+        };
+
+
+        children.forEach(
+          m => {
+
+            counts[
+              m.detectionLabel
+            ] =
+              (
+                counts[
+                  m.detectionLabel
+                ] || 0
+              ) + 1;
+
+          }
+        );
+
+
+        let dominant =
+          'insufficient_evidence';
+
+        let best = -1;
+
+
+        Object.keys(counts)
+          .forEach(k => {
+
+            if (
+              counts[k] > best
+            ) {
+
+              best =
+                counts[k];
+
+              dominant = k;
+
+            }
+
+          });
+
+
+        const color =
+          colors[dominant];
+
+
+        const count =
+          cluster.getChildCount();
+
+
+        const size =
+          count >= 100
+            ? 34
+            : count >= 25
+              ? 30
+              : count >= 5
+                ? 26
+                : 22;
+
+
+        const fontSize =
+          count >= 100
+            ? '10px'
+            : count >= 25
+              ? '11px'
+              : '11.5px';
+
+
+        return L.divIcon({
+
+          className:'',
+
+          html:`
+
+            <div style="
+              width:${size}px;
+              height:${size}px;
+
+              border-radius:50%;
+
+              background:${color};
+
+              border:2px solid #fff;
+
+              box-shadow:
+                0 0 12px
+                ${color}66,
+                0 2px 6px
+                rgba(0,0,0,.5);
+
+              display:flex;
+
+              align-items:center;
+              justify-content:center;
+
+              color:#fff;
+
+              font-family:
+                'JetBrains Mono',
+                monospace;
+
+              font-weight:700;
+
+              font-size:${fontSize};
+            ">
+
+              ${count}
+
+            </div>
+
+          `,
+
+          iconSize:[
+            size,
+            size
+          ],
+
+          iconAnchor:[
+            size/2,
+            size/2
+          ]
+
+        });
+
+      }
+
+  })
+  .addTo(map);
+
+
+/* =========================================================
+   CLUSTER CLICK
+========================================================= */
+
+window.markerClusterGroup.on(
+  'clusterclick',
+  function(e) {
+
+    const bounds =
+      e.layer.getBounds();
+
+    map.flyToBounds(
+      bounds,
+      {
+        padding:[40,40],
+        duration:.6,
+        maxZoom:16
+      }
+    );
+
+  }
+);
+
+
+/* =========================================================
+   INDIA FILTER
+========================================================= */
+
+const INDIA_BOUNDS = {
+
+  minLat:6.5,
+
+  maxLat:37.5,
+
+  minLng:68,
+
+  maxLng:97.5
+
+};
+
+
+/*
+  Served locally (see build_india_boundary.py).
+
+  This used to point at a ~6.6 MB file on raw.githubusercontent.com,
+  fetched inside the same Promise.all as the detections -- so nothing
+  rendered at all until that download finished, and a slow connection
+  or a GitHub rate-limit left the map and feed permanently empty.
+  The local copy is ~379 KB and has no external dependency.
+*/
+const INDIA_BOUNDARY_URL =
+  '/static/india_boundary.json';
+
+
+/*
+  Hard ceiling on how long the boundary may delay the first paint.
+  If it is not ready in time the map still renders, using the
+  bounding-box filter, and simply skips the finer polygon test.
+*/
+const BOUNDARY_TIMEOUT_MS = 2500;
+
+
+let indiaGeometry = null;
+
+
+async function loadIndiaBoundary() {
+
+  const resp =
+    await fetch(
+      INDIA_BOUNDARY_URL
+    );
+
+  if (!resp.ok)
+    throw new Error(
+      'boundary HTTP ' + resp.status
+    );
+
+  indiaGeometry =
+    await resp.json();
+
+  return indiaGeometry;
+
+}
+
+
+function loadIndiaBoundaryOrSkip() {
+
+  return Promise.race([
+
+    loadIndiaBoundary()
+      .catch(err => {
+
+        console.warn(
+          'India boundary failed to load:',
+          err
+        );
+
+        return null;
+
+      }),
+
+    new Promise(
+      resolve =>
+        setTimeout(
+          () => resolve(null),
+          BOUNDARY_TIMEOUT_MS
+        )
+    )
+
+  ]);
+
+}
+
+
+function filterToIndia(
+  detections
+) {
+
+  const bboxFiltered =
+    detections.filter(d => {
+
+      const lat =
+        Number(d.latitude);
+
+      const lng =
+        Number(d.longitude);
+
+
+      return (
+
+        lat >=
+          INDIA_BOUNDS.minLat &&
+
+        lat <=
+          INDIA_BOUNDS.maxLat &&
+
+        lng >=
+          INDIA_BOUNDS.minLng &&
+
+        lng <=
+          INDIA_BOUNDS.maxLng
+
+      );
+
+    });
+
+
+  if (!indiaGeometry) {
+
+    console.warn(
+      'India boundary unavailable — using bbox.'
+    );
+
+    return bboxFiltered;
+
+  }
+
+
+  return bboxFiltered.filter(
+    d => {
+
+      const pt =
+        turf.point([
+          Number(d.longitude),
+          Number(d.latitude)
+        ]);
+
+      return turf.booleanPointInPolygon(
+        pt,
+        indiaGeometry
+      );
+
+    }
+  );
+
+}
+
+
+/* =========================================================
+   LOAD DATA
+========================================================= */
+
+Promise.all([
+
+  fetch('/api/detections')
+    .then(r => r.json()),
+
+  fetch('/api/clusters')
+    .then(r => r.json()),
+
+  loadIndiaBoundaryOrSkip()
+
+])
+.then(
+  ([data,clusters]) => {
+
+    const indiaDetections =
+      filterToIndia(data);
+
+
+    allData =
+      indiaDetections.map(
+        (d,i) => ({
+          ...d,
+          _i:i
+        })
+      );
+
+
+    console.log(
+      `India filter:
+      ${indiaDetections.length}
+      of
+      ${data.length}
+      detections kept`
+    );
+
+
+    window.dataById = {};
+
+
+    allData.forEach(
+      d => {
+
+        window.dataById[
+          d._i
+        ] = d;
+
+      }
+    );
+
+
+    window.markerRefs = [];
+
+    window.selectedMarkerIdx =
+      null;
+
+    window.allClusters =
+      clusters;
+
+
+    const rows = visibleData();
+
+    renderMarkers(rows);
+    rebuildHeat(rows);
+    updateStatsFromRows(rows);
+
+    renderFeed('all');
+
+  }
+);
+
+
+/* =========================================================
+   MARKERS
+
+   Re-runnable: refreshAll() calls this again with a new row
+   set, so it has to clear the previous dots and drop stale
+   references rather than append.
+========================================================= */
+
+function renderMarkers(rows) {
+
+  window.markerClusterGroup.clearLayers();
+
+  window.markerRefs = [];
+
+
+  /*
+    A dot that no longer exists cannot stay selected, and its
+    glow ring lives outside the cluster group so it would
+    otherwise survive the clear.
+  */
+  window.selectedMarkerIdx = null;
+
+  if (window.glowMarker) {
+    map.removeLayer(window.glowMarker);
+    window.glowMarker = null;
+  }
+
+
+  const clusterMarkers = [];
+
+
+  rows.forEach(d => {
+
+      const isHigh =
+        d.final_label !==
+        'insufficient_evidence';
+
+
+      /*
+        Size by thermal strength, not just category, so a violent
+        fire reads as bigger than a marginal one at a glance.
+        Category still drives colour. sqrt keeps a single huge FRP
+        from dwarfing everything else on the map.
+      */
+      const categoryRadius =
+        d.final_label ===
+        'industrial_fire'
+
+        ? 6
+
+        : (
+            isHigh
+              ? 4.5
+              : 3
+          );
+
+      const frpBoost =
+        Math.min(
+          Math.sqrt(
+            Math.max(Number(d.frp) || 0, 0)
+          ) / 2.2,
+          4.5
+        );
+
+      /*
+        A 6px dot is a comfortable mouse target and a miserable
+        thumb target, so coarse pointers get a larger dot as well
+        as the tap-to-nearest fallback in the sheet controller.
+      */
+      const touchBoost =
+        window.matchMedia('(pointer: coarse)').matches
+          ? 2.5
+          : 0;
+
+      const baseRadius =
+        categoryRadius + frpBoost + touchBoost;
+
+
+      /*
+        DOTS REMAIN DOTS.
+      */
+
+      const marker =
+        L.circleMarker(
+          [
+            d.latitude,
+            d.longitude
+          ],
+          {
+
+            radius:
+              baseRadius,
+
+            color:'#fff',
+
+            weight:1,
+
+            fillColor:
+              colors[d.final_label],
+
+            fillOpacity:.9
+
+          }
+        );
+
+
+      marker._baseRadius =
+        baseRadius;
+
+
+      marker.detectionLabel =
+        d.final_label;
+
+
+      window.markerRefs[
+        d._i
+      ] = marker;
+
+
+      marker.on(
+        'click',
+        () =>
+          selectDetection(d._i)
+      );
+
+
+      clusterMarkers.push(
+        marker
+      );
+
+    });
+
+
+  window.markerClusterGroup
+    .addLayers(
+      clusterMarkers
+    );
+
+
+  /* Selection was just dropped -- hide its leader line. */
+  updateConnector();
+
+}
+
+
+/* =========================================================
+   SELECT DOT
+========================================================= */
+
+function selectDetection(i) {
+
+  /*
+    Reset previous dot.
+  */
+
+  if (
+    window.selectedMarkerIdx !== null &&
+    window.markerRefs[
+      window.selectedMarkerIdx
+    ]
+  ) {
+
+    const prev =
+      window.markerRefs[
+        window.selectedMarkerIdx
+      ];
+
+
+    if (map.hasLayer(prev)) {
+
+      prev.setStyle({
+
+        weight:1,
+
+        radius:
+          prev._baseRadius,
+
+        color:'#fff'
+
+      });
+
+    }
+
+  }
+
+
+  if (window.glowMarker) {
+
+    map.removeLayer(
+      window.glowMarker
+    );
+
+    window.glowMarker =
+      null;
+
+  }
+
+
+  const marker =
+    window.markerRefs[i];
+
+
+  const d =
+    window.dataById[i];
+
+
+  /*
+    Only show glow when the dot
+    is actually visible.
+  */
+
+  if (
+    marker &&
+    map.hasLayer(marker)
+  ) {
+
+    const fillColor =
+      colors[d.final_label];
+
+
+    window.glowMarker =
+      L.circleMarker(
+        [
+          d.latitude,
+          d.longitude
+        ],
+        {
+
+          radius:
+            marker._baseRadius + 9,
+
+          color:
+            fillColor,
+
+          weight:0,
+
+          fillColor:
+            fillColor,
+
+          fillOpacity:.22,
+
+          interactive:false
+
+        }
+      ).addTo(map);
+
+
+    window.glowMarker.bringToBack();
+
+
+    marker.setStyle({
+
+      weight:3,
+
+      radius:
+        marker._baseRadius + 3,
+
+      color:'#fff'
+
+    });
+
+
+    marker.bringToFront();
+
+  }
+
+
+  window.selectedMarkerIdx =
+    i;
+
+
+  openPanel(d);
+
+
+  setTimeout(
+    updateConnector,
+    20
+  );
+
+}
+
+
+
+/* =========================================================
+   SHEET UI  (touch layouts)
+
+   Owns everything that differs on a phone:
+
+     - the feed as a draggable bottom sheet with two snap points
+       (mid / full) plus dismiss, instead of a fixed side column
+     - the header button that raises the full-screen case list
+     - tap-anywhere-near-a-dot selection, because a 6px circle is
+       not a thumb target
+     - the floating layers dialog
+
+   Desktop code paths are untouched: every entry point no-ops
+   unless the media query matches.
+========================================================= */
+
+window.SheetUI = (function() {
+
+  const MQ =
+    window.matchMedia(
+      '(max-width: 900px), (pointer: coarse) and (max-width: 1100px)'
+    );
+
+  const feed      = document.getElementById('feed');
+  const backdrop  = document.getElementById('sheet-backdrop');
+  const grabber   = document.getElementById('sheet-grabber');
+  const navToggle = document.getElementById('nav-toggle');
+  const closeBtn  = document.getElementById('sheet-close');
+  const fab       = document.getElementById('fab-layers');
+  const layers    = document.getElementById('layer-controls');
+  const listView  = document.getElementById('list-view');
+  const detailView= document.getElementById('detail-view');
+  const evHead    = document.getElementById('ev-head');
+  const feedHead  = document.getElementById('feed-header');
+
+
+  /* 'closed' | 'list' | 'detail' */
+  let mode = 'closed';
+
+  let currentY = null;
+
+  let dragging   = false;
+  let startY     = 0;
+  let startPtr   = 0;
+  let lastPtr    = 0;
+  let lastTime   = 0;
+  let velocity   = 0;
+
+  let frame   = null;
+  let pending = null;
+
+  /* Last position the finger asked for. The painted value can lag it
+     by a frame, and the release decision must use the finger. */
+  let latest  = null;
+
+
+  function isMobile() {
+    return MQ.matches;
+  }
+
+
+  function viewportH() {
+    return window.innerHeight;
+  }
+
+
+  /*
+    Snap points as distance from the top of the viewport to the top
+    edge of the sheet. 'full' deliberately stops short of the top so
+    a strip of map stays visible and the sheet still reads as a
+    layer over the map rather than a new page.
+  */
+  function snaps() {
+
+    const h = viewportH();
+
+    const sheetH =
+      feed.offsetHeight || h;
+
+    return {
+      full:   Math.round(h * 0.10),
+      mid:    Math.round(h * 0.52),
+
+      /* Measured, so the sheet is always fully clear of the screen
+         even when innerHeight and 100dvh disagree. */
+      closed: Math.max(h, sheetH) + 2
+    };
+
+  }
+
+
+  /*
+    One transform write per frame. Everything else (opacity, radius)
+    is left alone during the drag so the gesture stays on the
+    compositor and cannot stutter.
+  */
+  function paint(value) {
+
+    pending = value;
+
+    if (frame !== null)
+      return;
+
+    frame = requestAnimationFrame(() => {
+
+      frame = null;
+
+      currentY = pending;
+
+      feed.style.setProperty(
+        '--sheet-y',
+        currentY + 'px'
+      );
+
+    });
+
+  }
+
+
+  function jumpTo(value) {
+
+    if (frame !== null) {
+      cancelAnimationFrame(frame);
+      frame = null;
+    }
+
+    currentY = value;
+
+    feed.style.setProperty(
+      '--sheet-y',
+      value + 'px'
+    );
+
+  }
+
+
+  function animateTo(value, after) {
+
+    feed.classList.remove('dragging');
+
+    /*
+      Transitioning from an unset position would tween out of the CSS
+      default and read as a jump, so the sheet is first parked
+      off-screen and that value is forced through layout before the
+      real target is written.
+    */
+    if (currentY === null) {
+      jumpTo(snaps().closed);
+      void feed.offsetHeight;
+    }
+
+    jumpTo(value);
+
+    if (after)
+      setTimeout(after, 380);
+
+  }
+
+
+  function showBackdrop(on) {
+
+    backdrop.classList.toggle('show', on);
+
+  }
+
+
+  function setMode(next) {
+
+    mode = next;
+
+    feed.classList.toggle('mode-list',   next === 'list');
+    feed.classList.toggle('mode-detail', next === 'detail');
+
+    document.body.classList.toggle(
+      'sheet-open',
+      next !== 'closed'
+    );
+
+    /* Dimming behind a mid-height detail card would hide the very
+       map the card is describing, so only the list dims. */
+    showBackdrop(next === 'list');
+
+  }
+
+
+  function openList() {
+
+    if (!isMobile())
+      return;
+
+    listView.style.display   = 'flex';
+    detailView.style.display = 'none';
+
+    setMode('list');
+
+    animateTo(0);
+
+  }
+
+
+  function openDetail() {
+
+    if (!isMobile())
+      return;
+
+    /*
+      Coming from the full-screen list the sheet must drop to mid,
+      otherwise the map it just flew to stays hidden behind it. Only
+      a sheet already sitting at full height stays there.
+    */
+    const wasFullDetail =
+      mode === 'detail' &&
+      currentY !== null &&
+      currentY <= snaps().full + 4;
+
+    listView.style.display   = 'none';
+    detailView.style.display = 'flex';
+
+    setMode('detail');
+
+    const target =
+      wasFullDetail
+        ? snaps().full
+        : snaps().mid;
+
+    animateTo(
+      target,
+      () => {
+
+        /* The mini map was laid out while the sheet was off-screen. */
+        if (window.satMapInstance)
+          window.satMapInstance.invalidateSize();
+
+      }
+    );
+
+  }
+
+
+  function close() {
+
+    if (!isMobile())
+      return;
+
+    setMode('closed');
+
+    animateTo(
+      snaps().closed,
+      () => {
+
+        listView.style.display   = 'flex';
+        detailView.style.display = 'none';
+
+        clearSelection();
+
+      }
+    );
+
+  }
+
+
+  /*
+    Drop the highlight when the sheet is dismissed -- otherwise a
+    dot stays ringed with no panel explaining why.
+  */
+  function clearSelection() {
+
+    if (
+      window.selectedMarkerIdx !== null &&
+      window.selectedMarkerIdx !== undefined &&
+      window.markerRefs &&
+      window.markerRefs[window.selectedMarkerIdx]
+    ) {
+
+      const prev =
+        window.markerRefs[window.selectedMarkerIdx];
+
+      if (map.hasLayer(prev))
+        prev.setStyle({
+          weight: 1,
+          radius: prev._baseRadius,
+          color: '#fff'
+        });
+
+    }
+
+    if (window.glowMarker) {
+      map.removeLayer(window.glowMarker);
+      window.glowMarker = null;
+    }
+
+    window.selectedMarkerIdx = null;
+
+  }
+
+
+  /*
+    Centre the map on a detection but push it into the upper band,
+    since the sheet is about to cover the lower half of the screen.
+  */
+  function focusDetection(d) {
+
+    if (!isMobile() || !d)
+      return;
+
+    const zoom =
+      Math.max(map.getZoom(), 12);
+
+    const latlng =
+      L.latLng(d.latitude, d.longitude);
+
+    const offset =
+      viewportH() * 0.20;
+
+    const center =
+      map.unproject(
+        map.project(latlng, zoom).add([0, offset]),
+        zoom
+      );
+
+    map.flyTo(center, zoom, { duration: .55 });
+
+  }
+
+
+  /* ---------------------------------------------------------
+     DRAG
+  --------------------------------------------------------- */
+
+  function lowerBound() {
+
+    return mode === 'list'
+      ? 0
+      : snaps().full;
+
+  }
+
+
+  function beginDrag(e) {
+
+    if (!isMobile() || mode === 'closed')
+      return;
+
+    /* Buttons inside the drag surfaces keep working. */
+    if (e.target.closest('button'))
+      return;
+
+    dragging = true;
+
+    startPtr = e.clientY;
+    lastPtr  = e.clientY;
+    lastTime = performance.now();
+    velocity = 0;
+
+    startY =
+      currentY === null
+        ? lowerBound()
+        : currentY;
+
+    feed.classList.add('dragging');
+
+    /* Capture keeps the gesture alive if the finger slides off the
+       handle; not every pointer type allows it, and failing to
+       capture must not abort the drag. */
+    try {
+      if (e.currentTarget.setPointerCapture)
+        e.currentTarget.setPointerCapture(e.pointerId);
+    } catch (err) {}
+
+  }
+
+
+  function moveDrag(e) {
+
+    if (!dragging)
+      return;
+
+    const min = lowerBound();
+    const max = snaps().closed;
+
+    let next = startY + (e.clientY - startPtr);
+
+    /* Resistance past the top stop instead of a hard wall. */
+    if (next < min)
+      next = min - (min - next) * 0.35;
+
+    if (next > max)
+      next = max;
+
+    const now = performance.now();
+
+    velocity =
+      (e.clientY - lastPtr) /
+      Math.max(now - lastTime, 1);
+
+    lastPtr  = e.clientY;
+    lastTime = now;
+
+    latest = next;
+
+    paint(next);
+
+    e.preventDefault();
+
+  }
+
+
+  function endDrag() {
+
+    if (!dragging)
+      return;
+
+    dragging = false;
+
+    const s = snaps();
+
+    const releasedAt =
+      latest !== null
+        ? latest
+        : currentY;
+
+    latest = null;
+
+    /*
+      Project the throw a short distance forward so a flick lands on
+      the snap the user aimed at, not the one they let go over.
+    */
+    const projected =
+      releasedAt +
+      Math.max(Math.min(velocity * 130, 260), -260);
+
+    const candidates =
+      mode === 'list'
+        ? [0, s.closed]
+        : [s.full, s.mid, s.closed];
+
+    let target = candidates[0];
+    let best   = Infinity;
+
+    candidates.forEach(c => {
+
+      const dist = Math.abs(projected - c);
+
+      if (dist < best) {
+        best   = dist;
+        target = c;
+      }
+
+    });
+
+    if (target === s.closed) {
+      close();
+      return;
+    }
+
+    animateTo(target);
+
+  }
+
+
+  function bindDrag(el) {
+
+    if (!el)
+      return;
+
+    el.addEventListener('pointerdown', beginDrag);
+    el.addEventListener('pointermove', moveDrag);
+    el.addEventListener('pointerup', endDrag);
+    el.addEventListener('pointercancel', endDrag);
+
+  }
+
+
+  bindDrag(grabber);
+  bindDrag(evHead);
+  bindDrag(feedHead);
+
+
+  /* ---------------------------------------------------------
+     CHROME
+  --------------------------------------------------------- */
+
+  if (navToggle)
+    navToggle.addEventListener('click', openList);
+
+  if (closeBtn)
+    closeBtn.addEventListener('click', close);
+
+
+  function closeLayers() {
+
+    layers.classList.remove('open');
+
+    if (fab)
+      fab.classList.remove('active');
+
+  }
+
+
+  if (fab)
+    fab.addEventListener('click', e => {
+
+      e.stopPropagation();
+
+      const open = !layers.classList.contains('open');
+
+      layers.classList.toggle('open', open);
+      fab.classList.toggle('active', open);
+
+    });
+
+
+  document.addEventListener('click', e => {
+
+    if (!isMobile())
+      return;
+
+    if (
+      layers.contains(e.target) ||
+      (fab && fab.contains(e.target))
+    )
+      return;
+
+    closeLayers();
+
+  });
+
+
+  backdrop.addEventListener('click', close);
+
+
+  /* ---------------------------------------------------------
+     TAP TARGETS
+
+     Fingertips are roughly 9mm wide and the dots are 6-13px, so
+     a tap resolves to the nearest detection within a thumb's
+     radius rather than requiring a direct hit.
+  --------------------------------------------------------- */
+
+  const TAP_RADIUS_PX = 64;
+
+  map.on('click', e => {
+
+    if (!isMobile())
+      return;
+
+    const refs = window.markerRefs || [];
+
+    const point = e.containerPoint;
+
+    let bestIdx  = null;
+    let bestDist = Infinity;
+
+    refs.forEach((marker, i) => {
+
+      if (!marker || !map.hasLayer(marker))
+        return;
+
+      const p =
+        map.latLngToContainerPoint(marker.getLatLng());
+
+      const dist =
+        Math.hypot(p.x - point.x, p.y - point.y);
+
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestIdx  = i;
+      }
+
+    });
+
+    if (bestIdx !== null && bestDist <= TAP_RADIUS_PX)
+      selectDetection(bestIdx);
+
+  });
+
+
+  /* ---------------------------------------------------------
+     BREAKPOINT CHANGES
+  --------------------------------------------------------- */
+
+  function syncToViewport() {
+
+    if (!isMobile()) {
+
+      /* Hand the column layout back its DOM unchanged. */
+      feed.classList.remove('mode-list', 'mode-detail', 'dragging');
+      feed.style.removeProperty('--sheet-y');
+
+      document.body.classList.remove('sheet-open');
+
+      showBackdrop(false);
+      closeLayers();
+
+      currentY = null;
+      mode = 'closed';
+
+      map.invalidateSize();
+
+      return;
+
+    }
+
+    if (mode === 'closed') {
+      jumpTo(snaps().closed);
+      return;
+    }
+
+    jumpTo(
+      mode === 'list'
+        ? 0
+        : Math.min(currentY, snaps().mid)
+    );
+
+  }
+
+
+  MQ.addEventListener
+    ? MQ.addEventListener('change', syncToViewport)
+    : MQ.addListener(syncToViewport);
+
+  window.addEventListener('resize', () => {
+
+    clearTimeout(window._sheetResizeT);
+
+    window._sheetResizeT =
+      setTimeout(syncToViewport, 150);
+
+  });
+
+  window.addEventListener('orientationchange', syncToViewport);
+
+
+  if (isMobile())
+    jumpTo(snaps().closed);
+
+
+  return {
+    isMobile,
+    openList,
+    openDetail,
+    close,
+    focusDetection
+  };
+
+})();
+
+</script>
+
+</body>
+</html>
