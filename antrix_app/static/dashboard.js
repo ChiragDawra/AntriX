@@ -130,8 +130,8 @@ const basemaps = {
     { attribution: '© Esri, Maxar, Earthstar Geographics', maxZoom: 20, maxNativeZoom: 18 }
   )
 };
-basemaps.dark.addTo(map);
-let activeBase = 'dark';
+basemaps.satellite.addTo(map);
+let activeBase = 'satellite';
 
 /* NASA GIBS VIIRS corrected reflectance: the same imagery family the FIRMS
    detections come from, pinned to the snapshot's last day so the picture and
