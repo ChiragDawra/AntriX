@@ -238,8 +238,8 @@ def test_site_view_opens_from_a_detection(server, browser):
     assert page.locator("#s-title").inner_text().strip() not in ("", "-", "—")
     # The daily log covers every day of the window, quiet days included,
     # so a site seen on the 1st and the 20th no longer looks continuous.
-    window_days = page.evaluate("""() => {
-      const r = document.querySelector("#p-range").textContent.split(" → ");
+    window_days = page.evaluate("""async () => {
+      const r = (await (await fetch('/api/stats')).json()).date_range;
       return Math.round((Date.parse(r[1]) - Date.parse(r[0])) / 864e5) + 1;
     }""")
     slots = page.locator("#s-body .daylog .sc-timeline rect[data-tip]").count()
@@ -340,4 +340,59 @@ def test_first_paint_is_not_blocked_by_the_data_volume(server, browser):
     # DOM nodes; the full set stays available through the CSV export.
     assert timing["rows"] <= 400
     assert timing["dcl"] < 4000, timing
+    page.close()
+
+
+def test_date_window_narrows_map_feed_and_exports(server, browser):
+    _, instance = browser
+    page = instance.new_page(viewport={"width": 1440, "height": 900})
+    errors = collect_errors(page)
+    page.goto(server, wait_until="domcontentloaded")
+    page.wait_for_selector(".item", timeout=20000)
+
+    before = page.locator("#tb-meta").inner_text()
+    page.select_option("#tb-preset", "7")
+    page.wait_for_timeout(500)
+    after = page.locator("#tb-meta").inner_text()
+
+    assert after.startswith("7 days"), after
+    assert before != after
+    # Exports follow the window, so the CSV matches the screen.
+    href = page.locator("#ex-csv").get_attribute("href")
+    assert "from=" in href and "to=" not in href.split("from=")[0]
+    # Every card in the feed is inside the window.
+    dates = page.locator(".item .facts span:last-child").all_inner_texts()
+    start = page.evaluate("state.days[state.range[0]]")
+    assert dates and all(d >= start for d in dates), (start, dates[:3])
+
+    assert not errors, errors
+    page.close()
+
+
+def test_playback_steps_through_days_and_stops_cleanly(server, browser):
+    _, instance = browser
+    page = instance.new_page(viewport={"width": 1440, "height": 900})
+    errors = collect_errors(page)
+    page.goto(server, wait_until="domcontentloaded")
+    page.wait_for_selector(".item", timeout=20000)
+
+    page.locator("#tb-play").click()
+    page.wait_for_timeout(300)
+    assert "playing" in page.locator("#timebar").get_attribute("class")
+    first = page.evaluate("play.day")
+    page.wait_for_timeout(1700)
+    assert page.evaluate("play.day") > first
+    assert page.locator("#feedcount").inner_text().startswith("Live")
+
+    page.locator("#tb-play").click()          # pause holds the frame
+    held = page.evaluate("play.day")
+    page.wait_for_timeout(900)
+    assert page.evaluate("play.day") == held
+
+    page.locator("#tb-stop").click()
+    page.wait_for_timeout(300)
+    assert "playing" not in (page.locator("#timebar").get_attribute("class") or "")
+    assert not page.locator("#feedcount").inner_text().startswith("Live")
+
+    assert not errors, errors
     page.close()

@@ -58,7 +58,13 @@ const state = {
   groupBySite: false,
   selected: null,
   watch: new Set(),
-  watchOnly: false
+  watchOnly: false,
+  days: [],          // every date in the snapshot, oldest first
+  range: [0, 0],     // selected window, as indexes into days
+  base: [],          // passes every filter but the window
+  buckets: [],       // base, split by day
+  dayAll: [],        // every row, split by day (for the metric strip)
+  classTotals: {}
 };
 
 /* The watchlist is per-browser on purpose: SATAT has no accounts, and a list
@@ -99,8 +105,9 @@ const num = (v, d = 2) => (v === '' || v === null || v === undefined || Number.i
 
 const map = L.map('map', {
   zoomControl: false,
-  preferCanvas: true,        // 400+ vector markers stay smooth
-  attributionControl: true
+  preferCanvas: true,        // the registry overlay is 3,800 vector circles
+  attributionControl: true,
+  maxZoom: 20
 });
 
 // Fit the country rather than hard-coding a zoom: a zoom level that frames
@@ -143,80 +150,280 @@ function gibsUrl(date) {
 }
 let gibsLayer = null;
 
-/* Clustering stays on at every zoom. It used to switch off at zoom 11, which
-   dropped the counts exactly when zooming into a plant, and months of data
-   stack dozens of detections on one site; co-located points now stay a
-   counted cluster that spiderfies at full zoom. The ring shows the class mix. */
-const markerLayer = L.markerClusterGroup({
-  maxClusterRadius: (zoom) => (zoom >= 12 ? 26 : zoom >= 9 ? 38 : 50),
-  spiderfyOnMaxZoom: true,
-  showCoverageOnHover: false,
-  chunkedLoading: true,
-  iconCreateFunction(cluster) {
-    const children = cluster.getAllChildMarkers();
-    const n = children.length;
-    const counts = {};
-    children.forEach((m) => { counts[m.options.cls] = (counts[m.options.cls] || 0) + 1; });
-    let acc = 0;
-    const stops = [];
-    CLASS_ORDER.forEach((key) => {
-      if (!counts[key]) return;
-      const from = acc / n * 360;
-      acc += counts[key];
-      stops.push(CLASS_META[key].color + ' ' + from.toFixed(1) + 'deg ' + (acc / n * 360).toFixed(1) + 'deg');
-    });
-    const size = n < 10 ? 30 : n < 100 ? 36 : n < 1000 ? 42 : 48;
-    const label = n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1) + 'k' : String(n);
-    return L.divIcon({
-      html: '<div class="cl" style="width:' + size + 'px;height:' + size + 'px;background:conic-gradient(' +
-        stops.join(',') + ')"><span>' + label + '</span></div>',
-      className: 'satat-cluster',
-      iconSize: [size, size]
-    });
-  }
-}).addTo(map);
-
 let heatLayer = null;
+let heatOn = false;
 let facilityLayer = null;
-const markerById = new Map();
 
 function radiusFor(frp) {
   const f = Number(frp) || 0;
   return Math.max(3.4, Math.min(11, 3.4 + Math.sqrt(f) * 1.5));
 }
 
-function drawMarkers(rows) {
-  markerLayer.clearLayers();
-  markerById.clear();
+/* All detections as individual Leaflet layers, re-clustered on every filter
+   change, was what made the dashboard lag with months of data. Now a
+   Supercluster index is rebuilt in a fraction of a second when filters
+   change, and only what is in view is drawn: clusters as small icons, single
+   detections on one canvas. */
 
-  const markers = rows.map((row) => {
-    const meta = CLASS_META[row.final_label] || CLASS_META.insufficient_evidence;
-    // A light rim and a near-solid fill keep every class, grey included,
-    // visible on both the imagery and the dark basemap.
-    const marker = L.circleMarker([row.latitude, row.longitude], {
-      radius: radiusFor(row.frp),
-      color: '#f5efe6',
-      weight: 1,
-      opacity: 0.9,
-      fillColor: meta.color,
-      fillOpacity: 0.88,
-      cls: row.final_label
-    });
-    marker.on('click', () => openDetail(row.detection_id));
-    markerById.set(row.detection_id, marker);
-    return marker;
+const PointCanvas = L.Layer.extend({
+  initialize() {
+    this._points = [];
+    this._drawn = [];
+  },
+
+  onAdd(m) {
+    this._canvas = L.DomUtil.create('canvas', 'pt-canvas leaflet-zoom-hide');
+    m.getPanes().overlayPane.appendChild(this._canvas);
+    m.on('moveend resize', this._reset, this);
+    this._reset();
+  },
+
+  onRemove(m) {
+    L.DomUtil.remove(this._canvas);
+    m.off('moveend resize', this._reset, this);
+  },
+
+  setPoints(pts) {
+    this._points = pts;
+    this._draw();
+  },
+
+  // The canvas is a quarter-screen larger than the map on every side, so a
+  // short pan does not reveal an empty edge before the redraw.
+  _reset() {
+    const m = this._map;
+    const size = m.getSize();
+    const pad = size.multiplyBy(0.25).round();
+    this._origin = m.containerPointToLayerPoint(pad.multiplyBy(-1)).round();
+    L.DomUtil.setPosition(this._canvas, this._origin);
+    const w = size.x + pad.x * 2;
+    const h = size.y + pad.y * 2;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    this._canvas.width = Math.round(w * dpr);
+    this._canvas.height = Math.round(h * dpr);
+    this._canvas.style.width = w + 'px';
+    this._canvas.style.height = h + 'px';
+    this._dpr = dpr;
+    this._draw();
+  },
+
+  // Points carry their zoom-0 pixel position, so placing 45k of them is a
+  // multiply and a subtract each rather than a full projection.
+  _draw() {
+    const m = this._map;
+    if (!m || !this._canvas || !this._origin) return;
+    const ctx = this._canvas.getContext('2d');
+    ctx.setTransform(this._dpr, 0, 0, this._dpr, 0, 0);
+    ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
+
+    const scale = m.getZoomScale(m.getZoom(), 0);
+    // Playback points shrink at country scale, or a day's thousand
+    // detections merge into one blob; they reach full size by zoom 9.
+    const zf = Math.min(1, Math.max(0.3, (m.getZoom() - 2) / 7));
+    const po = m.getPixelOrigin();
+    const ox = po.x + this._origin.x;
+    const oy = po.y + this._origin.y;
+    const drawn = [];
+
+    for (let i = 0; i < this._points.length; i += 1) {
+      const p = this._points[i];
+      const x = p.x0 * scale - ox;
+      const y = p.y0 * scale - oy;
+      const r = p.zs ? Math.max(1.4, p.r * zf) : p.r;
+      ctx.globalAlpha = p.alpha;
+      ctx.fillStyle = p.color;
+      if (p.dot) {
+        ctx.fillRect(x - r, y - r, r * 2, r * 2);
+        continue;
+      }
+      if (p.halo) {
+        ctx.globalAlpha = p.alpha * 0.26;
+        ctx.beginPath();
+        ctx.arc(x, y, r * 2.2, 0, 6.2832);
+        ctx.fill();
+        ctx.globalAlpha = p.alpha;
+      }
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, 6.2832);
+      ctx.fill();
+      if (p.rim && r >= 3) {
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(245, 239, 230, .9)';
+        ctx.stroke();
+      }
+      if (p.row) drawn.push(x, y, Math.max(r, 4), i);
+    }
+    ctx.globalAlpha = 1;
+    this._drawn = drawn;
+  },
+
+  // Nearest clickable point to a container pixel, within its radius plus slack.
+  hit(containerPoint, slack) {
+    if (!this._map || !this._drawn.length) return null;
+    const lp = this._map.containerPointToLayerPoint(containerPoint);
+    const cx = lp.x - this._origin.x;
+    const cy = lp.y - this._origin.y;
+    let best = null;
+    let bestD = Infinity;
+    const d = this._drawn;
+    for (let k = 0; k < d.length; k += 4) {
+      const dx = d[k] - cx;
+      const dy = d[k + 1] - cy;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist <= d[k + 2] + slack && dist < bestD) {
+        bestD = dist;
+        best = this._points[d[k + 3]].row;
+      }
+    }
+    return best;
+  }
+});
+
+const clusterLayer = L.layerGroup().addTo(map);
+const points = new PointCanvas().addTo(map);
+let highlight = null;
+let index = null;
+
+const CLASS_INDEX = Object.fromEntries(CLASS_ORDER.map((k, i) => [k, i]));
+
+function rebuildIndex() {
+  // Zoom 3 already shows all of India, and past 17 detections are drawn
+  // individually, so only those levels are indexed.
+  index = new Supercluster({
+    radius: 48,
+    minZoom: 3,
+    maxZoom: 17,
+    map: (p) => {
+      const counts = [0, 0, 0, 0, 0];
+      counts[p.k] = 1;
+      return { k0: counts[0], k1: counts[1], k2: counts[2], k3: counts[3], k4: counts[4] };
+    },
+    reduce: (acc, p) => {
+      acc.k0 += p.k0; acc.k1 += p.k1; acc.k2 += p.k2; acc.k3 += p.k3; acc.k4 += p.k4;
+    }
   });
-
-  markerLayer.addLayers(markers);
+  index.load(state.filtered.map((row, i) => ({
+    type: 'Feature',
+    properties: { i, k: CLASS_INDEX[row.final_label] ?? 4 },
+    geometry: { type: 'Point', coordinates: [row.longitude, row.latitude] }
+  })));
 }
 
-function buildHeat(rows) {
-  if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
-  const points = rows.map((r) => [r.latitude, r.longitude, Math.min(1, (Number(r.frp) || 0) / 20)]);
-  heatLayer = L.heatLayer(points, {
-    radius: 22, blur: 18, maxZoom: 10, minOpacity: 0.25,
-    gradient: { 0.2: '#3b4252', 0.45: '#7fa05a', 0.7: '#e2892f', 1: '#ff6b2c' }
+function clusterIcon(p) {
+  const n = p.point_count;
+  let acc = 0;
+  const stops = [];
+  CLASS_ORDER.forEach((key, i) => {
+    const c = p['k' + i];
+    if (!c) return;
+    const from = acc / n * 360;
+    acc += c;
+    stops.push(CLASS_META[key].color + ' ' + from.toFixed(1) + 'deg ' + (acc / n * 360).toFixed(1) + 'deg');
   });
+  const size = n < 10 ? 30 : n < 100 ? 36 : n < 1000 ? 42 : 48;
+  const label = n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1) + 'k' : String(n);
+  return L.divIcon({
+    html: '<div class="cl" style="width:' + size + 'px;height:' + size + 'px;background:conic-gradient(' +
+      stops.join(',') + ')"><span>' + label + '</span></div>',
+    className: 'satat-cluster',
+    iconSize: [size, size]
+  });
+}
+
+function pointFor(row) {
+  const meta = CLASS_META[row.final_label] || CLASS_META.insufficient_evidence;
+  // A light rim and a near-solid fill keep every class, grey included,
+  // visible on both the imagery and the dark basemap.
+  return { x0: row._x, y0: row._y, r: radiusFor(row.frp), color: meta.color, alpha: 0.9, rim: true, row };
+}
+
+function renderView() {
+  if (play.active) return;
+  clusterLayer.clearLayers();
+  if (!index) { points.setPoints([]); return; }
+
+  const b = map.getBounds().pad(0.3);
+  const box = [Math.max(-180, b.getWest()), Math.max(-85, b.getSouth()),
+    Math.min(180, b.getEast()), Math.min(85, b.getNorth())];
+  const features = index.getClusters(box, Math.round(map.getZoom()));
+  const singles = [];
+
+  features.forEach((f) => {
+    const [lon, lat] = f.geometry.coordinates;
+    if (f.properties.cluster) {
+      const marker = L.marker([lat, lon], { icon: clusterIcon(f.properties), keyboard: false });
+      marker.on('click', () => openCluster(f.properties.cluster_id, lat, lon));
+      clusterLayer.addLayer(marker);
+    } else {
+      singles.push(pointFor(state.filtered[f.properties.i]));
+    }
+  });
+
+  // Draw the unconfirmed first, so industrial readings sit on top.
+  singles.sort((a, b2) => (CLASS_INDEX[b2.row.final_label] ?? 4) - (CLASS_INDEX[a.row.final_label] ?? 4));
+  points.setPoints(singles);
+}
+
+/* A cluster zooms in until it splits. Detections stacked on one spot never
+   split, so at that point the cluster lists them instead. */
+function openCluster(id, lat, lon) {
+  const next = index.getClusterExpansionZoom(id);
+  if (next <= 18 && map.getZoom() < 17) {
+    map.setView([lat, lon], next);
+    return;
+  }
+  const rows = index.getLeaves(id, 60).map((l) => state.filtered[l.properties.i])
+    .sort((a, b) => Number(b.risk_score) - Number(a.risk_score));
+  const box = el('div', 'leafpop');
+  box.appendChild(el('h4', null, rows.length + ' detections at this spot'));
+  rows.slice(0, 12).forEach((row) => {
+    const meta = CLASS_META[row.final_label] || CLASS_META.insufficient_evidence;
+    const btn = el('button');
+    const dot = el('span', 'dot');
+    dot.style.background = meta.color;
+    btn.append(dot, el('span', 'd', row.acq_date), el('span', 'nm', row.nearest_facility_name || 'Unnamed site'),
+      el('span', 'r', num(row.risk_score)));
+    btn.addEventListener('click', () => { map.closePopup(); openDetail(row.detection_id); });
+    box.appendChild(btn);
+  });
+  L.popup({ className: 'satat-popup', maxWidth: 300 }).setLatLng([lat, lon]).setContent(box).openOn(map);
+}
+
+function setHighlight(row) {
+  if (highlight) { map.removeLayer(highlight); highlight = null; }
+  if (!row) return;
+  highlight = L.circleMarker([row.latitude, row.longitude], {
+    radius: 14, color: '#fff4e6', weight: 2, fill: false, interactive: false, dashArray: '3 3'
+  }).addTo(map);
+}
+
+map.on('moveend', renderView);
+
+map.on('click', (e) => {
+  const row = points.hit(e.containerPoint, L.Browser.mobile ? 12 : 5);
+  if (!row) return;
+  if (play.running) pausePlay();
+  openDetail(row.detection_id);
+});
+
+let hoverPending = false;
+map.on('mousemove', (e) => {
+  if (hoverPending) return;
+  hoverPending = true;
+  requestAnimationFrame(() => {
+    hoverPending = false;
+    map.getContainer().classList.toggle('pt-hover', !!points.hit(e.containerPoint, 5));
+  });
+});
+
+function refreshHeat() {
+  if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
+  if (!heatOn) return;
+  const rows = play.active ? playRows() : state.filtered;
+  heatLayer = L.heatLayer(rows.map((r) => [r.latitude, r.longitude, Math.min(1, (Number(r.frp) || 0) / 20)]), {
+    radius: 22, blur: 18, maxZoom: 10, minOpacity: 0.25,
+    gradient: { 0.2: '#5a4a3a', 0.45: '#7fa05a', 0.7: '#e2892f', 1: '#ff6b2c' }
+  }).addTo(map);
 }
 
 
@@ -233,30 +440,34 @@ function filterState() {
   };
 }
 
+/* Two sets come out of this. `base` passes every filter except the date
+   window; it feeds the timeline histogram and playback. `filtered` is base
+   inside the window; it feeds the map, feed and exports. */
 function applyFilters() {
   const f = filterState();
+  const [lo, hi] = state.range;
+  const buckets = Array.from({ length: state.days.length }, () => []);
+  const base = [];
+  const filtered = [];
 
-  state.filtered = state.rows.filter((row) => {
-    if (!state.classes.has(row.final_label)) return false;
-    if ((Number(row.risk_score) || 0) < f.minScore) return false;
-
+  state.rows.forEach((row) => {
+    if (!state.classes.has(row.final_label)) return;
+    if ((Number(row.risk_score) || 0) < f.minScore) return;
     if (f.sources.length) {
-      const confirming = String(row.sources_confirming || '').split('|').filter(Boolean);
-      if (!f.sources.some((s) => confirming.includes(s))) return false;
+      const confirming = String(row.sources_confirming || '').split('|');
+      if (!f.sources.some((s) => confirming.includes(s))) return;
     }
+    if (state.watchOnly && !state.watch.has(row.facility_uid)) return;
+    if (f.search && !String(row.nearest_facility_name || '').toLowerCase().includes(f.search)) return;
 
-    if (state.watchOnly && !state.watch.has(row.facility_uid)) return false;
-
-    if (f.search) {
-      const name = String(row.nearest_facility_name || '').toLowerCase();
-      if (!name.includes(f.search)) return false;
-    }
-    return true;
+    base.push(row);
+    if (row._d >= 0) buckets[row._d].push(row);
+    if (row._d >= lo && row._d <= hi) filtered.push(row);
   });
 
   const key = state.sort;
-  state.filtered.sort((a, b) => {
-    if (key === 'acq_date') return String(b.acq_date).localeCompare(String(a.acq_date));
+  filtered.sort((a, b) => {
+    if (key === 'acq_date') return b._d - a._d;
     const av = Number(a[key]); const bv = Number(b[key]);
     // Rows with no value for the sort key belong at the bottom, not the top.
     if (Number.isNaN(av) && Number.isNaN(bv)) return 0;
@@ -265,10 +476,16 @@ function applyFilters() {
     return bv - av;
   });
 
-  drawMarkers(state.filtered);
-  buildHeat(state.filtered);
-  if ($('#t-heat').getAttribute('aria-pressed') === 'true' && heatLayer) heatLayer.addTo(map);
+  state.base = base;
+  state.buckets = buckets;
+  state.filtered = filtered;
 
+  rebuildIndex();
+  if (play.active) renderFrame(); else renderView();
+  refreshHeat();
+
+  renderTimeline();
+  renderMetrics();
   renderFeed();
   renderChips();
   updateExportLinks();
@@ -280,6 +497,8 @@ function exportQuery() {
   if (state.sourceFilter.size) params.set('sources', [...state.sourceFilter].join(','));
   if (state.minScore > 0) params.set('min_score', String(state.minScore));
   if (state.search.trim()) params.set('q', state.search.trim());
+  if (state.range[0] > 0) params.set('from', state.days[state.range[0]]);
+  if (state.range[1] < state.days.length - 1) params.set('to', state.days[state.range[1]]);
   const qs = params.toString();
   return qs ? '?' + qs : '';
 }
@@ -292,28 +511,305 @@ function updateExportLinks() {
 
 
 /* =========================================================
+   TIME WINDOW
+========================================================= */
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const shortDate = (d) => (d ? MONTHS[Number(d.slice(5, 7)) - 1] + ' ' + Number(d.slice(8, 10)) : '-');
+const TL = { bars: [], head: null };
+
+function buildTimeline() {
+  const svg = $('#tb-hist');
+  const n = state.days.length;
+  svg.setAttribute('viewBox', '0 0 ' + n + ' 20');
+  svg.innerHTML = '';
+  const NS = 'http://www.w3.org/2000/svg';
+  TL.bars = state.days.map((day, i) => {
+    if (i > 0 && day.slice(8, 10) === '01') {
+      const line = document.createElementNS(NS, 'line');
+      line.setAttribute('class', 'm');
+      line.setAttribute('x1', i); line.setAttribute('x2', i);
+      line.setAttribute('y1', 0); line.setAttribute('y2', 20);
+      svg.appendChild(line);
+    }
+    const bar = document.createElementNS(NS, 'rect');
+    bar.setAttribute('class', 'b');
+    bar.setAttribute('x', i + 0.12);
+    bar.setAttribute('width', 0.76);
+    bar.dataset.i = String(i);
+    svg.appendChild(bar);
+    return bar;
+  });
+  TL.head = document.createElementNS(NS, 'rect');
+  TL.head.setAttribute('class', 'head');
+  TL.head.setAttribute('width', 0.5);
+  TL.head.setAttribute('y', -1);
+  TL.head.setAttribute('height', 22);
+  TL.head.style.display = 'none';
+  svg.appendChild(TL.head);
+
+  svg.addEventListener('click', (e) => {
+    const i = Number(e.target.dataset && e.target.dataset.i);
+    if (!play.active || Number.isNaN(i)) return;
+    play.day = Math.max(state.range[0], Math.min(state.range[1], i));
+    renderFrame();
+  });
+
+  const max = Math.max(n - 1, 0);
+  ['#tb-from', '#tb-to'].forEach((sel) => { $(sel).max = String(max); });
+  $('#tb-from').value = String(state.range[0]);
+  $('#tb-to').value = String(state.range[1]);
+}
+
+/* Bar heights follow every filter except the window itself, so the strip
+   shows where activity is before a window is chosen. */
+function renderTimeline() {
+  const counts = state.buckets.map((b) => b.length);
+  const max = Math.max(...counts, 1);
+  const [lo, hi] = state.range;
+  const d = play.active ? play.day : -1;
+  TL.bars.forEach((bar, i) => {
+    const h = counts[i] ? Math.max(1.2, Math.sqrt(counts[i] / max) * 19) : 0.4;
+    bar.setAttribute('y', 20 - h);
+    bar.setAttribute('height', h);
+    let cls = 'b';
+    if (i >= lo && i <= hi) cls += play.active ? (i < d ? ' past' : i === d ? ' now' : '') : ' in';
+    bar.setAttribute('class', cls);
+    C.tipped(bar, state.days[i] + ': ' + counts[i] + ' detection' + (counts[i] === 1 ? '' : 's'));
+  });
+  if (play.active) {
+    TL.head.style.display = '';
+    TL.head.setAttribute('x', d + 0.25);
+  } else {
+    TL.head.style.display = 'none';
+  }
+  renderTimeLabel();
+}
+
+function renderTimeLabel() {
+  const [lo, hi] = state.range;
+  const n = state.days.length;
+  const sel = $('#tb-sel');
+  sel.style.left = 'calc(7px + (100% - 14px) * ' + (n > 1 ? lo / (n - 1) : 0) + ')';
+  sel.style.right = 'calc(7px + (100% - 14px) * ' + (n > 1 ? 1 - hi / (n - 1) : 0) + ')';
+
+  if (play.active) {
+    const day = state.days[play.day];
+    const count = (state.buckets[play.day] || []).length;
+    $('#tb-dates').textContent = shortDate(day) + ' ' + day.slice(0, 4);
+    $('#tb-meta').textContent = 'day ' + (play.day - lo + 1) + ' of ' + (hi - lo + 1) + ' · ' + count + ' seen';
+  } else {
+    $('#tb-dates').textContent = shortDate(state.days[lo]) + ' - ' + shortDate(state.days[hi]);
+    $('#tb-meta').textContent = (hi - lo + 1) + ' days · ' + state.filtered.length.toLocaleString() + ' detections';
+  }
+}
+
+const refilterWindow = debounce(() => applyFilters(), 140);
+
+function setRange(lo, hi, preset) {
+  const n = state.days.length;
+  lo = Math.max(0, Math.min(n - 1, lo));
+  hi = Math.max(lo, Math.min(n - 1, hi));
+  state.range = [lo, hi];
+  $('#tb-from').value = String(lo);
+  $('#tb-to').value = String(hi);
+  $('#tb-preset').value = preset || (lo === 0 && hi === n - 1 ? 'all' : 'custom');
+  if (play.active) play.day = Math.max(lo, Math.min(hi, play.day));
+}
+
+function wireTimebar() {
+  const from = $('#tb-from');
+  const to = $('#tb-to');
+  const onSlide = (moved) => {
+    let lo = Number(from.value);
+    let hi = Number(to.value);
+    if (lo > hi) { if (moved === from) lo = hi; else hi = lo; }
+    setRange(lo, hi);
+    // Labels and the highlighted strip follow the thumb at once; the map
+    // waits for the drag to pause.
+    TL.bars.forEach((bar, i) => {
+      bar.classList.toggle('in', i >= lo && i <= hi && !play.active);
+    });
+    renderTimeLabel();
+    refilterWindow();
+  };
+  from.addEventListener('input', () => onSlide(from));
+  to.addEventListener('input', () => onSlide(to));
+
+  // Whichever thumb is nearer the pointer goes on top, so both stay
+  // grabbable when they meet.
+  $('#tb-track').addEventListener('pointerdown', (e) => {
+    const rect = from.getBoundingClientRect();
+    const n = state.days.length;
+    const at = ((e.clientX - rect.left - 7) / Math.max(1, rect.width - 14)) * (n - 1);
+    const nearFrom = Math.abs(at - Number(from.value)) <= Math.abs(at - Number(to.value));
+    from.style.zIndex = nearFrom ? '3' : '2';
+    to.style.zIndex = nearFrom ? '2' : '3';
+  });
+
+  $('#tb-preset').addEventListener('change', (e) => {
+    const n = state.days.length;
+    const v = e.target.value;
+    if (v === 'all') setRange(0, n - 1, 'all');
+    else if (v !== 'custom') setRange(n - Number(v), n - 1, v);
+    applyFilters();
+  });
+
+  $('#tb-play').addEventListener('click', () => (play.running ? pausePlay() : startPlay()));
+  $('#tb-stop').addEventListener('click', stopPlay);
+  $('#tb-speed').addEventListener('click', () => {
+    play.speed = play.speed >= 4 ? 1 : play.speed * 2;
+    $('#tb-speed').textContent = play.speed + 'x';
+  });
+}
+
+
+/* =========================================================
+   PLAYBACK
+
+   The window replayed one day at a time: the current day's detections glow,
+   the previous week fades out behind them, and everything earlier in the
+   window stays as a faint trace, so a site that burns every night reads as
+   a steady pulse and a crop fire as a single flash.
+========================================================= */
+
+const play = { active: false, running: false, day: 0, speed: 1, timer: null };
+const TRAIL_DAYS = 6;
+const DAY_MS = 700;
+
+function playRows() {
+  return state.buckets[play.day] || [];
+}
+
+function startPlay() {
+  const [lo, hi] = state.range;
+  if (!play.active) {
+    play.active = true;
+    play.day = lo;
+    $('#timebar').classList.add('playing');
+    closeDetail();
+  } else if (play.day >= hi) {
+    play.day = lo;
+  }
+  play.running = true;
+  $('#tb-play').setAttribute('aria-pressed', 'true');
+  $('#tb-play').setAttribute('aria-label', 'Pause playback');
+  renderFrame();
+  scheduleTick();
+}
+
+function scheduleTick() {
+  clearTimeout(play.timer);
+  play.timer = setTimeout(() => {
+    if (!play.running) return;
+    if (play.day >= state.range[1]) { pausePlay(); return; }
+    play.day += 1;
+    renderFrame();
+    scheduleTick();
+  }, DAY_MS / play.speed);
+}
+
+function pausePlay() {
+  play.running = false;
+  clearTimeout(play.timer);
+  $('#tb-play').setAttribute('aria-pressed', 'false');
+  $('#tb-play').setAttribute('aria-label', 'Resume playback');
+}
+
+function stopPlay() {
+  pausePlay();
+  play.active = false;
+  $('#timebar').classList.remove('playing');
+  $('#tb-play').setAttribute('aria-label', 'Play day by day');
+  renderView();
+  refreshHeat();
+  renderTimeline();
+  renderMetrics();
+  renderChips();
+  renderFeed();
+}
+
+function renderFrame() {
+  const [lo] = state.range;
+  const d = play.day;
+  const pts = [];
+
+  for (let k = lo; k < d; k += 1) {
+    const age = d - k;
+    const bucket = state.buckets[k] || [];
+    if (age > TRAIL_DAYS) {
+      for (const row of bucket) pts.push({ x0: row._x, y0: row._y, r: 1.2, color: '#e8d6b6', alpha: 0.15, dot: true });
+    } else {
+      const fade = 0.8 * (1 - age / (TRAIL_DAYS + 1));
+      for (const row of bucket) {
+        const meta = CLASS_META[row.final_label] || CLASS_META.insufficient_evidence;
+        pts.push({ x0: row._x, y0: row._y, r: radiusFor(row.frp) * 0.8, color: meta.color, alpha: fade, zs: true });
+      }
+    }
+  }
+  // Today last, on top: brighter, larger, haloed, and clickable.
+  (state.buckets[d] || []).forEach((row) => {
+    const meta = CLASS_META[row.final_label] || CLASS_META.insufficient_evidence;
+    pts.push({ x0: row._x, y0: row._y, r: radiusFor(row.frp) + 1.5, color: meta.color, alpha: 0.97,
+      halo: true, rim: true, zs: true, row });
+  });
+
+  clusterLayer.clearLayers();
+  points.setPoints(pts);
+  if (heatOn) refreshHeat();
+  renderTimeline();
+  renderMetrics();
+  renderChips();
+  renderFeed();
+}
+
+
+/* =========================================================
    RENDER - metrics, sources, chips, feed
 ========================================================= */
 
+/* Counts for what is on screen: the window, or during playback the day
+   being shown. Class filters do not apply, so the strip always shows the
+   whole picture for that period. */
+function periodRows() {
+  if (play.active) return state.dayAll[play.day] || [];
+  const [lo, hi] = state.range;
+  const out = [];
+  for (let k = lo; k <= hi; k += 1) {
+    const bucket = state.dayAll[k];
+    for (let j = 0; j < bucket.length; j += 1) out.push(bucket[j]);
+  }
+  return out;
+}
+
 function renderMetrics() {
-  const s = state.stats;
+  const rows = periodRows();
+  const counts = {};
+  let multi = 0;
+  let temp = 0;
+  rows.forEach((r) => {
+    counts[r.final_label] = (counts[r.final_label] || 0) + 1;
+    if (String(r.sources_confirming || '').split('|').filter(Boolean).length >= 2) multi += 1;
+    if (r.est_temp_k !== '' && r.est_temp_k !== null) temp += 1;
+  });
+
   // Phone columns are ~108px wide, so the desktop wording would be clipped
   // mid-word. Shorter labels are used rather than smaller text.
   const narrow = window.innerWidth <= 860;
   const cells = [
-    ['persistent_industrial_source', narrow ? 'Persistent' : 'Persistent source', s.persistent_industrial_source],
-    ['industrial_fire', narrow ? 'Industrial' : 'Industrial fire', s.industrial_fire],
-    ['flare_signature', narrow ? 'Flare' : 'Flare signature', s.flare_signature],
-    ['agricultural_burning', narrow ? 'Agri' : 'Agricultural', s.agricultural_burning],
-    ['insufficient_evidence', narrow ? 'Insuff.' : 'Insufficient', s.insufficient_evidence]
+    ['persistent_industrial_source', narrow ? 'Persistent' : 'Persistent source'],
+    ['industrial_fire', narrow ? 'Industrial' : 'Industrial fire'],
+    ['flare_signature', narrow ? 'Flare' : 'Flare signature'],
+    ['agricultural_burning', narrow ? 'Agri' : 'Agricultural'],
+    ['insufficient_evidence', narrow ? 'Insuff.' : 'Insufficient']
   ];
 
   const host = $('#metrics');
   host.innerHTML = '';
 
-  cells.forEach(([key, label, value]) => {
+  cells.forEach(([key, label]) => {
     const cell = el('div', 'metric');
-    cell.appendChild(el('div', 'v', value === undefined ? '-' : String(value)));
+    cell.appendChild(el('div', 'v', (counts[key] || 0).toLocaleString()));
     const k = el('div', 'k');
     const dot = el('span', 'dot');
     dot.style.background = CLASS_META[key].color;
@@ -324,13 +820,13 @@ function renderMetrics() {
   });
 
   const extra = [
-    [s.multi_source_confirmed, narrow ? '2+ sources' : 'Confirmed 2+ sources'],
-    [s.temperature_retrieved, narrow ? 'Temp.' : 'Temp. retrieved'],
-    [s.registry_sites, narrow ? 'Sites' : 'Registry sites']
+    [multi, narrow ? '2+ sources' : 'Confirmed 2+ sources'],
+    [temp, narrow ? 'Temp.' : 'Temp. retrieved'],
+    [state.stats.registry_sites, narrow ? 'Sites' : 'Registry sites']
   ];
   extra.forEach(([value, label]) => {
     const cell = el('div', 'metric');
-    cell.appendChild(el('div', 'v', value === undefined ? '-' : String(value)));
+    cell.appendChild(el('div', 'v', value === undefined ? '-' : Number(value).toLocaleString()));
     cell.appendChild(el('div', 'k', label));
     host.appendChild(cell);
   });
@@ -378,11 +874,11 @@ function renderSources() {
 function renderChips() {
   const host = $('#class-chips');
   const counts = {};
-  state.rows.forEach((r) => { counts[r.final_label] = (counts[r.final_label] || 0) + 1; });
+  periodRows().forEach((r) => { counts[r.final_label] = (counts[r.final_label] || 0) + 1; });
 
   host.innerHTML = '';
   CLASS_ORDER.forEach((key) => {
-    if (!counts[key]) return;
+    if (!state.classTotals[key]) return;
     const meta = CLASS_META[key];
     const chip = el('button', 'chip');
     chip.setAttribute('aria-pressed', String(state.classes.has(key)));
@@ -391,7 +887,7 @@ function renderChips() {
     dot.style.background = meta.color;
     chip.appendChild(dot);
     chip.appendChild(document.createTextNode(meta.short));
-    chip.appendChild(el('span', 'n', String(counts[key])));
+    chip.appendChild(el('span', 'n', String(counts[key] || 0)));
 
     chip.addEventListener('click', () => {
       if (state.classes.has(key)) state.classes.delete(key);
@@ -451,22 +947,37 @@ function renderFeed() {
   const host = $('#feed');
   host.innerHTML = '';
 
-  const rows = state.groupBySite ? groupBySite(state.filtered) : state.filtered;
+  // During playback the feed is the day being shown, highest priority first:
+  // a live log that turns over as the days advance.
+  const source = play.active
+    ? playRows().slice().sort((a, b) => Number(b.risk_score) - Number(a.risk_score))
+    : state.filtered;
+  const rows = state.groupBySite ? groupBySite(source) : source;
+  const limit = play.active ? 120 : 400;
+  const count = $('#feedcount');
 
-  $('#feedcount').textContent = state.groupBySite
-    ? rows.length + ' sites · ' + state.filtered.length + ' detections'
-    : state.filtered.length + ' of ' + state.rows.length + ' detections';
+  count.classList.toggle('live', play.active);
+  if (play.active) {
+    count.textContent = 'Live · ' + shortDate(state.days[play.day]) + ' · ' +
+      (state.groupBySite ? rows.length + ' sites · ' : '') + source.length + ' detections';
+  } else {
+    count.textContent = state.groupBySite
+      ? rows.length + ' sites · ' + state.filtered.length + ' detections'
+      : state.filtered.length + ' of ' + state.base.length + ' detections';
+  }
 
   if (!rows.length) {
-    host.appendChild(el('div', 'empty', 'No detections match these filters.'));
+    host.appendChild(el('div', 'empty', play.active
+      ? 'Nothing detected on this day with the current filters.'
+      : 'No detections match these filters.'));
     return;
   }
 
   const fragment = document.createDocumentFragment();
 
-  rows.slice(0, 400).forEach((row) => {
+  rows.slice(0, limit).forEach((row) => {
     const meta = CLASS_META[row.final_label] || CLASS_META.insufficient_evidence;
-    const item = el('button', 'item');
+    const item = el('button', play.active ? 'item fresh' : 'item');
     item.setAttribute('role', 'option');
     item.setAttribute('aria-selected', String(state.selected === row.detection_id));
     item.dataset.id = row.detection_id;
@@ -504,15 +1015,19 @@ function renderFeed() {
 
     item.appendChild(sourceBar(row));
 
-    item.addEventListener('click', () => openDetail(row.detection_id));
+    item.addEventListener('click', () => {
+      if (play.running) pausePlay();
+      openDetail(row.detection_id);
+    });
     fragment.appendChild(item);
   });
 
   host.appendChild(fragment);
 
-  if (rows.length > 400) {
-    host.appendChild(el('div', 'empty',
-      'Showing the 400 highest-ranked. Export the CSV for all ' + rows.length + '.'));
+  if (rows.length > limit) {
+    host.appendChild(el('div', 'empty', play.active
+      ? 'Showing the ' + limit + ' highest-ranked for this day.'
+      : 'Showing the 400 highest-ranked. Export the CSV for all ' + rows.length + '.'));
   }
 }
 
@@ -633,7 +1148,8 @@ async function openDetail(id) {
   url.searchParams.set('detection', id);
   history.replaceState(null, '', url);
 
-  if (markerById.get(id)) map.setView([lite.latitude, lite.longitude], Math.max(map.getZoom(), 9));
+  map.setView([lite.latitude, lite.longitude], Math.max(map.getZoom(), 9));
+  setHighlight(lite);
 
   const token = ++detailToken;
   let row;
@@ -1094,6 +1610,7 @@ function closeSite() {
 
 function closeDetail() {
   detailToken += 1;
+  setHighlight(null);
   $('#detail').hidden = true;
   const url = new URL(window.location);
   url.searchParams.delete('detection');
@@ -1146,8 +1663,6 @@ function wireControls() {
       document.querySelectorAll('#maptools .seg button').forEach((b) => {
         b.setAttribute('aria-pressed', String(b.dataset.base === key));
       });
-      // Keep detections above the newly added tile layer.
-      markerLayer.bringToFront();
     });
   });
 
@@ -1158,8 +1673,8 @@ function wireControls() {
   });
 
   toggle($('#t-heat'), (on) => {
-    if (!heatLayer) buildHeat(state.filtered);
-    if (on) heatLayer.addTo(map); else map.removeLayer(heatLayer);
+    heatOn = on;
+    refreshHeat();
   });
   toggle($('#t-facilities'), toggleFacilities);
   toggle($('#t-gibs'), (on) => {
@@ -1169,7 +1684,7 @@ function wireControls() {
         attribution: 'NASA EOSDIS GIBS', maxNativeZoom: 8, maxZoom: 20, opacity: 0.75
       });
     }
-    if (on) { gibsLayer.addTo(map); markerLayer.bringToFront(); }
+    if (on) gibsLayer.addTo(map);
     else map.removeLayer(gibsLayer);
   });
 
@@ -1249,6 +1764,12 @@ function wireControls() {
       e.preventDefault();
       $('#search').focus();
     }
+    // Space plays and pauses, unless a control that wants it has focus.
+    const tag = document.activeElement ? document.activeElement.tagName : '';
+    if (e.key === ' ' && !['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON'].includes(tag)) {
+      e.preventDefault();
+      if (play.running) pausePlay(); else startPlay();
+    }
   });
 
   const layerToggle = $('#maptools-toggle');
@@ -1259,6 +1780,7 @@ function wireControls() {
     layerToggle.setAttribute('aria-expanded', String(open));
   });
 
+  wireTimebar();
   wireResize();
   wireSheet();
 }
@@ -1306,10 +1828,11 @@ function wireSheet() {
 /* /api/map sends columns once, value rows, and lookup tables for repeated
    strings. Rebuild plain row objects here so the rest of the file is
    unaware of the transport format. */
-function decodeMap(payload) {
+function decodeMap(payload, dayIndex) {
   const cols = payload.columns;
   const dicts = cols.map((c) => (payload.dictionaries || {})[c] || null);
   const loaded = payload.sources_loaded || '';
+  const crs = L.CRS.EPSG3857;
   return payload.rows.map((values) => {
     const row = { sources_loaded: loaded };
     for (let i = 0; i < cols.length; i += 1) {
@@ -1318,6 +1841,12 @@ function decodeMap(payload) {
     }
     row.grid_lat = Math.round(row.latitude * 100) / 100;
     row.grid_lon = Math.round(row.longitude * 100) / 100;
+    row._d = dayIndex.has(row.acq_date) ? dayIndex.get(row.acq_date) : -1;
+    // Zoom-0 pixel position: the canvas layer scales this instead of
+    // projecting every point on every frame.
+    const px = crs.latLngToPoint(L.latLng(row.latitude, row.longitude), 0);
+    row._x = px.x;
+    row._y = px.y;
     return row;
   });
 }
@@ -1340,17 +1869,19 @@ async function boot() {
   state.watch = loadWatch();
   state.stats = stats;
   state.sources = sources.sources || [];
-  state.rows = decodeMap(payload);
+  state.days = windowDays();
+  const dayIndex = new Map(state.days.map((d, i) => [d, i]));
+  state.rows = decodeMap(payload, dayIndex);
+  state.range = [0, Math.max(state.days.length - 1, 0)];
+  state.dayAll = Array.from({ length: state.days.length }, () => []);
+  state.rows.forEach((r) => {
+    if (r._d >= 0) state.dayAll[r._d].push(r);
+    state.classTotals[r.final_label] = (state.classTotals[r.final_label] || 0) + 1;
+  });
 
-  $('#p-snap').textContent = stats.snapshot_id || '-';
-  $('#p-range').textContent = stats.date_range
-    ? stats.date_range[0] + ' → ' + stats.date_range[1] : '-';
-  $('#p-method').textContent = 'v' + (stats.method_version || '-');
-  $('#p-build').textContent = stats.build || '-';
-
-  renderMetrics();
   renderSources();
   renderWatchCount();
+  buildTimeline();
   frameIndia();
   applyFilters();
   wireControls();
