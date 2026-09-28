@@ -1,4 +1,4 @@
-"""World Resources Institute — Global Power Plant Database.
+"""World Resources Institute - Global Power Plant Database.
 
 ~35k plants worldwide, ~1.6k in India, with capacity, primary fuel, owner and
 commissioning year. Published by WRI under CC BY 4.0.
@@ -15,7 +15,7 @@ from sources._http import download
 SOURCE = "wri"
 LABEL = "WRI Global Power Plant DB"
 SHORT = "WRI"
-LICENSE = "CC BY 4.0 — World Resources Institute"
+LICENSE = "CC BY 4.0 - World Resources Institute"
 HOMEPAGE = "https://datasets.wri.org/dataset/globalpowerplantdatabase"
 URL = (
     "https://raw.githubusercontent.com/wri/global-power-plant-database/"

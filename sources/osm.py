@@ -20,7 +20,7 @@ from sources import schema
 SOURCE = "osm"
 LABEL = "OpenStreetMap (Overpass)"
 SHORT = "OSM"
-LICENSE = "ODbL 1.0 — © OpenStreetMap contributors"
+LICENSE = "ODbL 1.0 - © OpenStreetMap contributors"
 HOMEPAGE = "https://www.openstreetmap.org/copyright"
 FILENAME = "osm_industrial.json"
 

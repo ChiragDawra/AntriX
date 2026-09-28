@@ -1,4 +1,4 @@
-"""NOAA / Colorado School of Mines EOG — global gas flare inventory.
+"""NOAA / Colorado School of Mines EOG - global gas flare inventory.
 
 EOG's VIIRS Nightfire processing yields a per-site annual inventory of gas
 flares: location, detection frequency, average radiant heat and estimated
@@ -14,7 +14,7 @@ Availability, honestly stated:
   is imported. That is the normal path: download once from EOG with your
   account, drop it in, and it is picked up from then on.
 * If neither is present the source reports ``unavailable`` and the dashboard
-  shows the NOAA filter as not loaded. It never invents rows — a fabricated
+  shows the NOAA filter as not loaded. It never invents rows - a fabricated
   flare inventory would be worse than no flare inventory.
 
 ``sources/eog_columns.py`` documents the column names the importer accepts, so
@@ -90,7 +90,7 @@ def fetch(raw_dir: Path, force: bool = False) -> dict:
         return {
             "status": "unavailable",
             "error": result.get("error", "download failed"),
-            "hint": f"Set SATAT_EOG_URL, or drop a file at {raw_dir}/eog_flares.csv",
+            "hint": "Set SATAT_EOG_URL, or drop a file at data/raw/eog_flares.csv",
         }
 
     return {
@@ -98,7 +98,7 @@ def fetch(raw_dir: Path, force: bool = False) -> dict:
         "error": "no local file and SATAT_EOG_URL is not set",
         "hint": (
             "Download the flare inventory from https://eogdata.mines.edu/products/vnf/ "
-            f"(free account) and save it as {raw_dir}/eog_flares.csv"
+            "(free account) and save it as data/raw/eog_flares.csv"
         ),
     }
 

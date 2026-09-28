@@ -22,7 +22,7 @@ from sources._http import download
 SOURCE = "gem"
 LABEL = "Global Energy Monitor"
 SHORT = "GEM"
-LICENSE = "CC BY 4.0 — Global Energy Monitor"
+LICENSE = "CC BY 4.0 - Global Energy Monitor"
 HOMEPAGE = "https://globalenergymonitor.org/projects/"
 
 # (filename, zenodo url, sheet, ftype)

@@ -4,11 +4,11 @@
     "osm": {
       "label": "OpenStreetMap (Overpass)",
       "short": "OSM",
-      "license": "ODbL 1.0 \u2014 \u00a9 OpenStreetMap contributors",
+      "license": "ODbL 1.0 - \u00a9 OpenStreetMap contributors",
       "homepage": "https://www.openstreetmap.org/copyright",
       "fetch": {
         "status": "cached",
-        "path": "/Users/chiragdawra/Desktop/HackSpace/AntriX/data/raw/osm_industrial.json",
+        "path": "data/raw/osm_industrial.json",
         "bytes": 5504668
       },
       "records": 16299,
@@ -27,11 +27,11 @@
     "wri": {
       "label": "WRI Global Power Plant DB",
       "short": "WRI",
-      "license": "CC BY 4.0 \u2014 World Resources Institute",
+      "license": "CC BY 4.0 - World Resources Institute",
       "homepage": "https://datasets.wri.org/dataset/globalpowerplantdatabase",
       "fetch": {
         "status": "cached",
-        "path": "/Users/chiragdawra/Desktop/HackSpace/AntriX/data/raw/wri_global_power_plant_database.csv",
+        "path": "data/raw/wri_global_power_plant_database.csv",
         "bytes": 11973385
       },
       "records": 1589,
@@ -44,24 +44,24 @@
     "gem": {
       "label": "Global Energy Monitor",
       "short": "GEM",
-      "license": "CC BY 4.0 \u2014 Global Energy Monitor",
+      "license": "CC BY 4.0 - Global Energy Monitor",
       "homepage": "https://globalenergymonitor.org/projects/",
       "fetch": {
         "status": "ok",
         "parts": {
           "gem_coal_plant_tracker.xlsx": {
             "status": "cached",
-            "path": "/Users/chiragdawra/Desktop/HackSpace/AntriX/data/raw/gem_coal_plant_tracker.xlsx",
+            "path": "data/raw/gem_coal_plant_tracker.xlsx",
             "bytes": 2942220
           },
           "gem_oil_gas_plant_tracker.xlsx": {
             "status": "cached",
-            "path": "/Users/chiragdawra/Desktop/HackSpace/AntriX/data/raw/gem_oil_gas_plant_tracker.xlsx",
+            "path": "data/raw/gem_oil_gas_plant_tracker.xlsx",
             "bytes": 3248102
           },
           "gem_steel_plant_tracker.xlsx": {
             "status": "cached",
-            "path": "/Users/chiragdawra/Desktop/HackSpace/AntriX/data/raw/gem_steel_plant_tracker.xlsx",
+            "path": "data/raw/gem_steel_plant_tracker.xlsx",
             "bytes": 842098
           }
         },
@@ -84,12 +84,12 @@
       "fetch": {
         "status": "unavailable",
         "error": "no local file and SATAT_EOG_URL is not set",
-        "hint": "Download the flare inventory from https://eogdata.mines.edu/products/vnf/ (free account) and save it as /Users/chiragdawra/Desktop/HackSpace/AntriX/data/raw/eog_flares.csv"
+        "hint": "Download the flare inventory from https://eogdata.mines.edu/products/vnf/ (free account) and save it as data/raw/eog_flares.csv"
       },
       "records": 0,
       "status": "unavailable",
       "by_type": {},
-      "hint": "Download the flare inventory from https://eogdata.mines.edu/products/vnf/ (free account) and save it as /Users/chiragdawra/Desktop/HackSpace/AntriX/data/raw/eog_flares.csv"
+      "hint": "Download the flare inventory from https://eogdata.mines.edu/products/vnf/ (free account) and save it as data/raw/eog_flares.csv"
     }
   },
   "total_records": 20160,
