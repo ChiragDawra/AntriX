@@ -11,6 +11,8 @@ import gzip
 import io
 import json
 import os
+import threading
+from collections import defaultdict
 from pathlib import Path
 
 import pandas as pd
@@ -48,24 +50,36 @@ SOURCE_KEYS = ["osm", "wri", "gem", "eog"]
 # --------------------------------------------------------------------------
 
 _cache: dict[str, tuple[float, object]] = {}
+_locks: dict[str, threading.Lock] = defaultdict(threading.Lock)
+
+
+def _cached(key: str, stamp: float, compute):
+    """Return the cached value for key, computing it at most once per stamp.
+
+    The lock matters now that a warm-up thread and the first requests can ask
+    for the same 45k-row computation at once on a single small instance.
+    """
+    hit = _cache.get(key)
+    if hit and hit[0] == stamp:
+        return hit[1]
+    with _locks[key]:
+        hit = _cache.get(key)
+        if hit and hit[0] == stamp:
+            return hit[1]
+        value = compute()
+        _cache[key] = (stamp, value)
+        return value
 
 
 def _load(path: Path, loader):
     """Read a file once and keep it, re-reading only when it changes on disk.
 
-    The previous version re-parsed a 166 KB CSV on every single API call,
-    including the two calls the dashboard makes on every page load. Keying the
-    cache on mtime means a pipeline rerun is still picked up without a restart.
+    Keying the cache on mtime means a pipeline rerun is still picked up
+    without a restart.
     """
     if not path.exists():
         return None
-    stamp = path.stat().st_mtime
-    hit = _cache.get(str(path))
-    if hit and hit[0] == stamp:
-        return hit[1]
-    value = loader(path)
-    _cache[str(path)] = (stamp, value)
-    return value
+    return _cached(str(path), path.stat().st_mtime, lambda: loader(path))
 
 
 def detections() -> pd.DataFrame:
@@ -211,12 +225,7 @@ def _geojson(df: pd.DataFrame, lat_col="latitude", lon_col="longitude") -> dict:
 def _per_snapshot(key: str, compute):
     """Cache a derived value until the detections file changes."""
     stamp = DETECTIONS_FILE.stat().st_mtime if DETECTIONS_FILE.exists() else 0.0
-    hit = _cache.get(key)
-    if hit and hit[0] == stamp:
-        return hit[1]
-    value = compute()
-    _cache[key] = (stamp, value)
-    return value
+    return _cached(key, stamp, compute)
 
 
 INDUSTRIAL_LABELS = ("persistent_industrial_source", "industrial_fire", "flare_signature")
@@ -261,8 +270,11 @@ def column_profiles() -> dict:
         out = {}
         for col in df.columns:
             series = df[col]
-            text = series.astype(str).str.strip()
-            present = series.notna() & text.ne("") & text.ne("nan")
+            present = series.notna()
+            if series.dtype == object:
+                # Only text columns can hold blank strings; stringifying every
+                # numeric column too made this take 25 s on a small instance.
+                present &= series.astype(str).str.strip().ne("")
             profile = {"fill": round(float(present.mean()), 4) if len(df) else 0.0}
             values = series[present]
 
@@ -703,6 +715,23 @@ def export_site(facility_uid):
     if subset.empty:
         return jsonify({"error": "not found"}), 404
     return _csv_response(subset, f"satat_site_{facility_uid}.csv")
+
+
+def _warm() -> None:
+    """Parse the snapshot and build every derived view once, off the request
+    path, so the first visitor after a deploy does not wait for it."""
+    try:
+        detections()
+        _map_payload()
+        daily_by_class()
+        footprint()
+        column_profiles()
+    except Exception:  # a failed warm-up only means the first request pays
+        app.logger.exception("cache warm-up failed")
+
+
+if os.environ.get("SATAT_WARM", "1") == "1":
+    threading.Thread(target=_warm, name="satat-warm", daemon=True).start()
 
 
 if __name__ == "__main__":

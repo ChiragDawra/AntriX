@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 
@@ -5,6 +6,7 @@ import pandas as pd
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
+os.environ.setdefault("SATAT_WARM", "0")   # tests compute what they touch
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "antrix_app"))
 
