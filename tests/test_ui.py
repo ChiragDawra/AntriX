@@ -84,7 +84,7 @@ def test_dashboard_loads_without_console_errors(server, browser):
     assert page.locator(".source").count() == 4
     assert page.locator(".item").count() > 0
     # The provenance strip must show a real snapshot, not the placeholder.
-    assert page.locator("#p-snap").inner_text().strip() not in ("", "—")
+    assert page.locator("#p-snap").inner_text().strip() not in ("", "-", "—")
 
     if SHOTS.exists():
         page.screenshot(path=str(SHOTS / "ui_desktop.png"))
@@ -102,6 +102,8 @@ def test_detail_panel_shows_per_source_distances(server, browser):
     page.wait_for_selector(".item", timeout=15000)
     page.locator(".item").first.click()
     page.wait_for_selector("#detail:not([hidden])", timeout=5000)
+    # The full record is fetched on open; wait for the evidence to render.
+    page.wait_for_selector(".srcmatrix", timeout=8000)
 
     assert page.locator(".contrib").count() >= 5
     assert page.locator(".srcmatrix > div").count() == 4
@@ -224,6 +226,7 @@ def test_site_view_opens_from_a_detection(server, browser):
     page.wait_for_selector(".item", timeout=15000)
     page.locator(".item").first.click()
     page.wait_for_selector("#detail:not([hidden])", timeout=5000)
+    page.wait_for_selector(".srcmatrix", timeout=8000)
 
     link = page.locator(".sitelink")
     if link.count() == 0 or link.first.is_disabled():
@@ -232,8 +235,15 @@ def test_site_view_opens_from_a_detection(server, browser):
     link.first.click()
     page.wait_for_selector("#site:not([hidden])", timeout=5000)
 
-    assert page.locator("#s-title").inner_text().strip() not in ("", "—")
-    assert page.locator(".daybars .col").count() > 0
+    assert page.locator("#s-title").inner_text().strip() not in ("", "-", "—")
+    # The daily log covers every day of the window, quiet days included,
+    # so a site seen on the 1st and the 20th no longer looks continuous.
+    window_days = page.evaluate("""() => {
+      const r = document.querySelector("#p-range").textContent.split(" → ");
+      return Math.round((Date.parse(r[1]) - Date.parse(r[0])) / 864e5) + 1;
+    }""")
+    slots = page.locator("#s-body .daylog .sc-timeline rect[data-tip]").count()
+    assert slots == window_days, (slots, window_days)
 
     if SHOTS.exists():
         page.screenshot(path=str(SHOTS / "ui_site.png"))
@@ -251,6 +261,7 @@ def test_watchlist_persists_across_reloads(server, browser):
     page.wait_for_selector(".item", timeout=15000)
     page.locator(".item").first.click()
     page.wait_for_selector("#detail:not([hidden])", timeout=5000)
+    page.wait_for_selector(".srcmatrix", timeout=8000)
 
     link = page.locator(".sitelink")
     if link.count() == 0 or link.first.is_disabled():
@@ -305,6 +316,7 @@ def test_dashboard_works_with_every_external_host_blocked(server, browser):
 
     page.locator(".item").first.click()
     page.wait_for_selector("#detail:not([hidden])", timeout=5000)
+    page.wait_for_selector(".srcmatrix", timeout=8000)
     assert page.locator(".contrib").count() >= 5
 
     if SHOTS.exists():

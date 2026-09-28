@@ -14,7 +14,7 @@ const CLASS_META = {
   industrial_fire:              { label: 'Industrial fire',              short: 'Industrial fire', color: '#e05252' },
   flare_signature:              { label: 'Flare signature',              short: 'Flare', color: '#ff6b2c' },
   agricultural_burning:         { label: 'Agricultural burning',         short: 'Agricultural', color: '#7fa05a' },
-  insufficient_evidence:        { label: 'Insufficient evidence',        short: 'Insufficient', color: '#656e7d' }
+  insufficient_evidence:        { label: 'Insufficient evidence',        short: 'Insufficient', color: '#9aa3b1' }
 };
 
 const CLASS_ORDER = [
@@ -38,10 +38,10 @@ const TEMP_CLASS_LABEL = {
 
 const RETRIEVAL_NOTE = {
   weak_11um: 'The 11 µm channel shows no excess over background, so the bi-spectral solve is unconstrained. No temperature is reported rather than a fabricated one.',
-  below_background: 'The 3.7 µm channel is not meaningfully above the local background — no hot component to solve for.',
-  no_bracket: 'No physical solution inside the 400–2500 K search range.',
+  below_background: 'The 3.7 µm channel is not meaningfully above the local background - no hot component to solve for.',
+  no_bracket: 'No physical solution inside the 400 to 2500 K search range.',
   unconstrained: 'The solution sat against the edge of the search range, which means the observation does not pin it down.',
-  saturated_lower_bound: 'VIIRS I4 saturated at 367 K. The retrieved temperature is a floor, not an estimate — the true fire is at least this hot.',
+  saturated_lower_bound: 'VIIRS I4 saturated at 367 K. The retrieved temperature is a floor, not an estimate - the true fire is at least this hot.',
   no_data: 'One of the two thermal channels is missing for this detection.'
 };
 
@@ -90,7 +90,7 @@ const el = (tag, cls, text) => {
 };
 
 const num = (v, d = 2) => (v === '' || v === null || v === undefined || Number.isNaN(Number(v)))
-  ? '—' : Number(v).toFixed(d);
+  ? '-' : Number(v).toFixed(d);
 
 
 /* =========================================================
@@ -143,20 +143,34 @@ function gibsUrl(date) {
 }
 let gibsLayer = null;
 
+/* Clustering stays on at every zoom. It used to switch off at zoom 11, which
+   dropped the counts exactly when zooming into a plant, and months of data
+   stack dozens of detections on one site; co-located points now stay a
+   counted cluster that spiderfies at full zoom. The ring shows the class mix. */
 const markerLayer = L.markerClusterGroup({
-  maxClusterRadius: 44,
+  maxClusterRadius: (zoom) => (zoom >= 12 ? 26 : zoom >= 9 ? 38 : 50),
   spiderfyOnMaxZoom: true,
   showCoverageOnHover: false,
-  disableClusteringAtZoom: 11,
+  chunkedLoading: true,
   iconCreateFunction(cluster) {
-    const n = cluster.getChildCount();
-    const size = n < 10 ? 28 : n < 50 ? 34 : 40;
+    const children = cluster.getAllChildMarkers();
+    const n = children.length;
+    const counts = {};
+    children.forEach((m) => { counts[m.options.cls] = (counts[m.options.cls] || 0) + 1; });
+    let acc = 0;
+    const stops = [];
+    CLASS_ORDER.forEach((key) => {
+      if (!counts[key]) return;
+      const from = acc / n * 360;
+      acc += counts[key];
+      stops.push(CLASS_META[key].color + ' ' + from.toFixed(1) + 'deg ' + (acc / n * 360).toFixed(1) + 'deg');
+    });
+    const size = n < 10 ? 30 : n < 100 ? 36 : n < 1000 ? 42 : 48;
+    const label = n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1) + 'k' : String(n);
     return L.divIcon({
-      html: '<div style="width:' + size + 'px;height:' + size + 'px;border-radius:50%;' +
-        'background:rgba(21,25,32,.92);border:1px solid #323a45;color:#e7eaef;' +
-        'display:grid;place-items:center;font-family:\'IBM Plex Mono\',monospace;' +
-        'font-size:' + (n < 100 ? 12 : 11) + 'px">' + n + '</div>',
-      className: '',
+      html: '<div class="cl" style="width:' + size + 'px;height:' + size + 'px;background:conic-gradient(' +
+        stops.join(',') + ')"><span>' + label + '</span></div>',
+      className: 'satat-cluster',
       iconSize: [size, size]
     });
   }
@@ -177,13 +191,16 @@ function drawMarkers(rows) {
 
   const markers = rows.map((row) => {
     const meta = CLASS_META[row.final_label] || CLASS_META.insufficient_evidence;
+    // A light rim and a near-solid fill keep every class, grey included,
+    // visible on both the imagery and the dark basemap.
     const marker = L.circleMarker([row.latitude, row.longitude], {
       radius: radiusFor(row.frp),
-      color: meta.color,
-      weight: 1.2,
-      opacity: 0.95,
+      color: '#f5efe6',
+      weight: 1,
+      opacity: 0.9,
       fillColor: meta.color,
-      fillOpacity: row.final_label === 'insufficient_evidence' ? 0.22 : 0.5
+      fillOpacity: 0.88,
+      cls: row.final_label
     });
     marker.on('click', () => openDetail(row.detection_id));
     markerById.set(row.detection_id, marker);
@@ -275,7 +292,7 @@ function updateExportLinks() {
 
 
 /* =========================================================
-   RENDER — metrics, sources, chips, feed
+   RENDER - metrics, sources, chips, feed
 ========================================================= */
 
 function renderMetrics() {
@@ -296,7 +313,7 @@ function renderMetrics() {
 
   cells.forEach(([key, label, value]) => {
     const cell = el('div', 'metric');
-    cell.appendChild(el('div', 'v', value === undefined ? '—' : String(value)));
+    cell.appendChild(el('div', 'v', value === undefined ? '-' : String(value)));
     const k = el('div', 'k');
     const dot = el('span', 'dot');
     dot.style.background = CLASS_META[key].color;
@@ -313,7 +330,7 @@ function renderMetrics() {
   ];
   extra.forEach(([value, label]) => {
     const cell = el('div', 'metric');
-    cell.appendChild(el('div', 'v', value === undefined ? '—' : String(value)));
+    cell.appendChild(el('div', 'v', value === undefined ? '-' : String(value)));
     cell.appendChild(el('div', 'k', label));
     host.appendChild(cell);
   });
@@ -333,7 +350,7 @@ function renderSources() {
       btn.disabled = true;
       btn.title = info.hint || 'This registry is not loaded for the current snapshot.';
     } else {
-      btn.title = info.label + ' — ' + info.records + ' records · ' + info.license;
+      btn.title = info.label + ' - ' + info.records + ' records · ' + info.license;
     }
 
     const top = el('div', 'top');
@@ -397,8 +414,8 @@ function sourceBar(row) {
     const cell = el('i');
     if (confirming.includes(key)) cell.className = 'on';
     else if (!loaded.includes(key)) cell.className = 'off-src';
-    cell.title = key.toUpperCase() + (confirming.includes(key) ? ' — confirms'
-      : loaded.includes(key) ? ' — no facility within 3 km' : ' — registry not loaded');
+    cell.title = key.toUpperCase() + (confirming.includes(key) ? ' - confirms'
+      : loaded.includes(key) ? ' - no facility within 3 km' : ' - registry not loaded');
     bar.appendChild(cell);
   });
   return bar;
@@ -505,6 +522,17 @@ function renderFeed() {
 ========================================================= */
 
 let contextMap = null;
+const C = window.SatatCharts;
+const detailCache = new Map();
+let detailToken = 0;
+
+const RISK_COLOR = { Critical: '#e05252', High: '#e2892f', Moderate: '#cbb03c', Low: '#6b7484' };
+const REGIME_COLOR = {
+  flare_like: '#ff6b2c', furnace_like: '#e05252', mixed: '#e2892f',
+  biomass_like: '#7fa05a', smouldering: '#d6b67a', unknown: '#59616e'
+};
+
+const isTrue = (v) => v === true || v === 'True' || v === 'true';
 
 function block(labelText) {
   const b = el('div', 'block');
@@ -521,58 +549,152 @@ function kvList(pairs) {
   return dl;
 }
 
-function openDetail(id) {
-  const row = state.rows.find((r) => r.detection_id === id);
-  if (!row) return;
+function badge(text, color) {
+  const b = el('span', 'badge');
+  if (color) {
+    const d = el('span', 'dot');
+    d.style.background = color;
+    b.appendChild(d);
+  }
+  b.appendChild(document.createTextNode(text));
+  return b;
+}
+
+function tiles(items, cls) {
+  const wrap = el('div', 'tiles' + (cls ? ' ' + cls : ''));
+  items.forEach(([value, label, ring, color]) => {
+    const t = el('div', 'tile');
+    const text = el('div');
+    text.style.minWidth = '0';
+    text.appendChild(el('div', 'tv', value));
+    text.appendChild(el('div', 'tk', label));
+    t.appendChild(text);
+    if (ring !== undefined && ring !== null && ring !== '' && Number.isFinite(Number(ring))) {
+      t.appendChild(C.ring(Number(ring), { size: 30, thickness: 6, color: color || '#e2892f' }));
+    }
+    wrap.appendChild(t);
+  });
+  return wrap;
+}
+
+/* Every date in the snapshot window, so timelines show quiet days too. */
+function windowDays() {
+  const range = state.stats.date_range;
+  if (!range) return [];
+  const out = [];
+  const day = new Date(range[0] + 'T00:00:00Z');
+  const end = new Date(range[1] + 'T00:00:00Z');
+  while (day <= end) {
+    out.push(day.toISOString().slice(0, 10));
+    day.setUTCDate(day.getUTCDate() + 1);
+  }
+  return out;
+}
+
+async function fetchDetection(id) {
+  if (detailCache.has(id)) return detailCache.get(id);
+  const response = await fetch('/api/detection/' + encodeURIComponent(id));
+  if (!response.ok) throw new Error('HTTP ' + response.status);
+  const record = await response.json();
+  detailCache.set(id, record);
+  return record;
+}
+
+/* The map only carries what it draws; the full evidence record is fetched
+   when a detection is opened. The panel opens at once with what is known and
+   fills in when the record arrives. */
+async function openDetail(id) {
+  const lite = state.rows.find((r) => r.detection_id === id);
+  if (!lite) return;
 
   state.selected = id;
   document.querySelectorAll('.item').forEach((node) => {
     node.setAttribute('aria-selected', String(node.dataset.id === id));
   });
 
-  const meta = CLASS_META[row.final_label] || CLASS_META.insufficient_evidence;
-  $('#d-title').textContent = row.nearest_facility_name || 'Unnamed site';
+  const meta = CLASS_META[lite.final_label] || CLASS_META.insufficient_evidence;
+  $('#d-title').textContent = lite.nearest_facility_name || 'Unnamed site';
   $('#d-title').style.color = 'var(--text)';
-  $('#d-sub').innerHTML = '';
+  setDetailSub(lite, meta);
+
+  $('#d-export').onclick = () => {
+    if (lite.facility_uid) window.location.href = '/api/export/site/' + lite.facility_uid + '.csv';
+  };
+  $('#d-export').disabled = !lite.facility_uid;
+
+  const body = $('#d-body');
+  body.innerHTML = '';
+  body.appendChild(el('div', 'loading', 'Loading the evidence for this detection...'));
+  $('#detail').hidden = false;
+  if (window.innerWidth <= 860) $('#sidepane').classList.add('open');
+
+  // Deep link, so a detection can be sent to someone rather than described.
+  const url = new URL(window.location);
+  url.searchParams.set('detection', id);
+  history.replaceState(null, '', url);
+
+  if (markerById.get(id)) map.setView([lite.latitude, lite.longitude], Math.max(map.getZoom(), 9));
+
+  const token = ++detailToken;
+  let row;
+  try {
+    row = await fetchDetection(id);
+  } catch (err) {
+    if (token !== detailToken) return;
+    body.innerHTML = '';
+    body.appendChild(el('div', 'loading', 'Could not load this detection: ' + err.message));
+    return;
+  }
+  if (token !== detailToken) return;
+  setDetailSub(row, meta);
+  renderDetail(row, meta);
+}
+
+function setDetailSub(row, meta) {
   const sub = $('#d-sub');
+  sub.innerHTML = '';
   const clsSpan = el('span', null, meta.label);
   clsSpan.style.color = meta.color;
   sub.appendChild(clsSpan);
+  const time = row.acq_time === undefined || row.acq_time === '' ? ''
+    : ' ' + String(row.acq_time).padStart(4, '0') + ' UTC';
   sub.appendChild(document.createTextNode(
-    ' · ' + row.acq_date + ' ' + String(row.acq_time).padStart(4, '0') + ' UTC' +
+    ' · ' + row.acq_date + time +
     ' · ' + Number(row.latitude).toFixed(4) + ', ' + Number(row.longitude).toFixed(4)
   ));
+}
 
-  $('#d-export').onclick = () => {
-    if (row.facility_uid) window.location.href = '/api/export/site/' + row.facility_uid + '.csv';
-  };
-  $('#d-export').disabled = !row.facility_uid;
-
+function renderDetail(row, meta) {
   const body = $('#d-body');
   body.innerHTML = '';
 
   /* --- priority --- */
   const scoreBlock = block('Investigation priority');
-  const thermo = el('div', 'thermo');
-  const big = el('div', 'big', num(row.risk_score));
-  thermo.appendChild(big);
-  thermo.appendChild(el('div', 'unit', '/ 1.00'));
-  const rl = el('div', 'cls');
-  rl.appendChild(el('div', 'label', 'Risk level'));
-  rl.appendChild(el('div', 'num', row.risk_level || '—'));
-  thermo.appendChild(rl);
-  scoreBlock.appendChild(thermo);
-  scoreBlock.appendChild(kvList([
-    ['Anomaly probability', num(row.anomaly_probability)],
-    ['Evidence score', num(row.evidence_score) + ' (' + (row.evidence_level || 'n/a') + ')'],
-    ['Model probability', row.ml_industrial_prob === '' ? 'not trained' : num(row.ml_industrial_prob)],
-    ['Unsupervised anomaly', num(row.unsupervised_anomaly)]
-  ]));
+  const top = el('div', 'case-top');
+  const gaugeHost = el('div');
+  C.gauge(gaugeHost, row.risk_score, { label: 'Priority score', digits: 2 });
+  top.appendChild(gaugeHost);
+
+  const right = el('div');
+  const badges = el('div', 'badges');
+  badges.appendChild(badge(row.risk_level || 'n/a', RISK_COLOR[row.risk_level]));
+  badges.appendChild(badge(meta.label, meta.color));
+  if (row.evidence_level) badges.appendChild(badge(row.evidence_level + ' evidence'));
+  right.appendChild(badges);
+  right.appendChild(C.meter('Anomaly probability', row.anomaly_probability, { color: '#e2892f' }));
+  right.appendChild(C.meter('Evidence score', row.evidence_score, { color: '#d6b67a' }));
+  right.appendChild(C.meter('Model probability', row.ml_industrial_prob === '' ? NaN : row.ml_industrial_prob, { color: '#e05252' }));
+  right.appendChild(C.meter('Unsupervised anomaly', row.unsupervised_anomaly, { color: '#b5532a' }));
+  top.appendChild(right);
+  scoreBlock.appendChild(top);
   body.appendChild(scoreBlock);
 
   /* --- contributions --- */
-  let contributions = [];
-  try { contributions = JSON.parse(row.contributions || '[]'); } catch (e) { contributions = []; }
+  let contributions = row.contributions;
+  if (typeof contributions === 'string') {
+    try { contributions = JSON.parse(contributions || '[]'); } catch (e) { contributions = []; }
+  }
+  if (!Array.isArray(contributions)) contributions = [];
 
   if (contributions.length) {
     const cBlock = block('What produced this score');
@@ -580,10 +702,10 @@ function openDetail(id) {
 
     contributions.forEach((c) => {
       const wrap = el('div', 'contrib');
-      const top = el('div', 'top');
-      top.appendChild(el('span', null, c.label));
-      top.appendChild(el('span', 'w', (c.contribution >= 0 ? '+' : '') + c.contribution.toFixed(3)));
-      wrap.appendChild(top);
+      const head = el('div', 'top');
+      head.appendChild(el('span', null, c.label));
+      head.appendChild(el('span', 'w', (c.contribution >= 0 ? '+' : '') + c.contribution.toFixed(3)));
+      wrap.appendChild(head);
 
       const bar = el('div', 'bar');
       const fill = el('i', c.contribution < 0 ? 'neg' : null);
@@ -607,29 +729,40 @@ function openDetail(id) {
     const cell = el('div');
     const distance = row['dist_' + key + '_km'];
     const isLoaded = loadedSources.includes(key);
+    const known = isLoaded && distance !== '' && distance !== null;
     if (confirming.includes(key)) cell.className = 'hit';
     if (!isLoaded) cell.className = 'na';
     cell.appendChild(el('div', 's', key === 'eog' ? 'NOAA' : key.toUpperCase()));
-    cell.appendChild(el('div', 'd',
-      !isLoaded ? 'n/a' : (distance === '' || distance === null ? '—' : num(distance, 1) + ' km')));
+    cell.appendChild(el('div', 'd', !isLoaded ? 'n/a' : (known ? num(distance, 1) + ' km' : '-')));
+    if (known) {
+      // Proximity bar: full within the site, empty at 10 km.
+      const prox = el('span', 'prox');
+      prox.style.display = 'block';
+      const fill = el('i');
+      fill.style.width = (Math.max(0, 1 - Number(distance) / 10) * 100).toFixed(0) + '%';
+      if (!confirming.includes(key)) fill.style.background = 'var(--dim-2)';
+      prox.appendChild(fill);
+      cell.appendChild(prox);
+      C.tipped(cell, key.toUpperCase() + ': nearest listed facility ' + num(distance, 2) + ' km away'
+        + (confirming.includes(key) ? ', inside the 3 km corroboration radius' : ''));
+    }
     matrix.appendChild(cell);
   });
   rBlock.appendChild(matrix);
 
-  const siteLink = el('button', 'sitelink', row.nearest_facility_name || '—');
+  const siteLink = el('button', 'sitelink', row.nearest_facility_name || '-');
   siteLink.addEventListener('click', () => openSite(row.facility_uid));
   siteLink.disabled = !row.facility_uid;
 
   rBlock.appendChild(kvList([
     ['Matched site', ''],
-    ['Site type', String(row.nearest_facility_type || '—').replace(/_/g, ' ')],
-    ['Listed by', String(row.facility_sources || '—').toUpperCase().replace(/\|/g, ' · ')],
+    ['Site type', String(row.nearest_facility_type || '-').replace(/_/g, ' ')],
+    ['Listed by', String(row.facility_sources || '-').toUpperCase().replace(/\|/g, ' · ')],
     ['Operating status', row.facility_status || 'unknown'],
     ['Capacity', row.facility_capacity_value === '' || !row.facility_capacity_value
-      ? '—' : num(row.facility_capacity_value, 0) + ' ' + (row.facility_capacity_unit || '')],
+      ? '-' : num(row.facility_capacity_value, 0) + ' ' + (row.facility_capacity_unit || '')],
     ['Corroboration score', num(row.corroboration_score)]
   ]));
-  // Swap the placeholder cell for the clickable site name.
   const firstValue = rBlock.querySelector('.kv dd');
   if (firstValue) { firstValue.textContent = ''; firstValue.appendChild(siteLink); }
 
@@ -638,10 +771,12 @@ function openDetail(id) {
 
   /* --- physics --- */
   const pBlock = block('Sub-pixel combustion physics');
-  if (row.est_temp_k !== '' && row.est_temp_k !== null) {
+  const hasTemp = row.est_temp_k !== '' && row.est_temp_k !== null;
+  if (hasTemp) {
     const t = Number(row.est_temp_k);
     const thermoRow = el('div', 'thermo');
-    const tv = el('div', 'big', Math.round(t));
+    const tv = el('div', 'big', String(Math.round(t)));
+    tv.style.color = REGIME_COLOR[row.temp_class] || 'var(--accent)';
     thermoRow.appendChild(tv);
     thermoRow.appendChild(el('div', 'unit', 'K'));
     const tc = el('div', 'cls');
@@ -659,21 +794,25 @@ function openDetail(id) {
     const ticks = el('div', 'scale-ticks');
     ['400 K', '900 K', '1400 K', '2500 K'].forEach((label) => ticks.appendChild(el('span', null, label)));
     pBlock.appendChild(ticks);
+  }
 
-    pBlock.appendChild(kvList([
-      ['Hot area', row.est_area_m2 === '' ? '—' : num(row.est_area_m2, 0) + ' m²'],
-      ['Fire radiative power', num(row.frp, 2) + ' MW'],
-      ['Retrieval', row.retrieval_status || '—']
-    ]));
+  const physicsTiles = tiles([
+    [num(row.frp, 1) + ' MW', 'Radiative power'],
+    [hasTemp && row.est_area_m2 !== '' ? num(row.est_area_m2, 0) + ' m²' : 'n/a', 'Hot area'],
+    [num(row.thermal_abnormality), 'Above local baseline', row.thermal_abnormality, '#e05252'],
+    [num(row.frp_intensity_norm), 'FRP percentile', row.frp_intensity_norm, '#e2892f']
+  ]);
+  physicsTiles.style.marginTop = hasTemp ? '10px' : '0';
+  pBlock.appendChild(physicsTiles);
 
-    if (row.temp_is_lower_bound === true || row.temp_is_lower_bound === 'True') {
-      pBlock.appendChild(el('div', 'note warn', RETRIEVAL_NOTE.saturated_lower_bound));
-    }
-  } else {
-    pBlock.appendChild(kvList([
-      ['Fire radiative power', num(row.frp, 2) + ' MW'],
-      ['Retrieval', row.retrieval_status || '—']
-    ]));
+  const status = el('div', 'chipset');
+  status.appendChild(badge('Retrieval: ' + (row.retrieval_status || 'n/a'),
+    row.retrieval_status === 'ok' ? '#4e9e6a' : '#c8973a'));
+  pBlock.appendChild(status);
+
+  if (hasTemp && isTrue(row.temp_is_lower_bound)) {
+    pBlock.appendChild(el('div', 'note warn', RETRIEVAL_NOTE.saturated_lower_bound));
+  } else if (!hasTemp) {
     pBlock.appendChild(el('div', 'note',
       RETRIEVAL_NOTE[row.retrieval_status] ||
       'The bi-spectral retrieval did not converge for this pixel.'));
@@ -682,23 +821,50 @@ function openDetail(id) {
 
   /* --- behaviour --- */
   const tBlock = block('Temporal behaviour');
-  tBlock.appendChild(kvList([
-    ['Distinct days detected', String(row.recurrence_days || 0)],
-    ['Detections in cell', String(row.detections_in_cell || 0)],
-    ['Night fraction', num(row.night_fraction)],
-    ['Duty cycle', num(row.duty_cycle)],
-    ['FRP vs local baseline', num(row.thermal_abnormality)],
-    ['Lifecycle', [
-      row.new_source === true || row.new_source === 'True' ? 'newly appeared' : null,
-      row.reactivated === true || row.reactivated === 'True' ? 'reactivated' : null,
-      row.ceased === true || row.ceased === 'True' ? 'ceased' : null
-    ].filter(Boolean).join(', ') || 'steady']
-  ]));
+  tBlock.appendChild(tiles([
+    [String(row.recurrence_days || 0), 'Distinct days'],
+    [String(row.detections_in_cell || 0), 'Detections in cell'],
+    [num(row.night_fraction), 'Night share', row.night_fraction, '#d6b67a'],
+    [num(row.duty_cycle), 'Duty cycle', row.duty_cycle, '#e2892f']
+  ], 'four'));
 
-  const series = cellSeries(row);
-  if (series.length > 1) tBlock.appendChild(sparkline(series));
+  const life = el('div', 'chipset');
+  const flags = [
+    [isTrue(row.new_source), 'Newly appeared', '#e05252'],
+    [isTrue(row.reactivated), 'Reactivated', '#e2892f'],
+    [isTrue(row.ceased), 'Ceased', '#9aa3b1']
+  ].filter((f) => f[0]);
+  if (flags.length) flags.forEach((f) => life.appendChild(badge(f[1], f[2])));
+  else life.appendChild(badge('Steady over the window', '#4e9e6a'));
+  tBlock.appendChild(life);
 
-  if (row.agri_season_context === true || row.agri_season_context === 'True') {
+  const days = cellDays(row);
+  if (days.some((d) => d.value > 0)) {
+    const caption = el('span', 'label', 'Daily peak FRP in this 1 km cell');
+    caption.style.cssText = 'display:block;margin:12px 0 6px';
+    tBlock.appendChild(caption);
+    const holder = el('div', 'daylog');
+    C.timeline(holder, days, {
+      value: (d) => d.value,
+      color: (d) => (d.date === row.acq_date ? '#ff6b2c' : '#e2892f'),
+      tip: (d) => (d.count
+        ? d.date + ': ' + d.count + ' detection' + (d.count > 1 ? 's' : '') + ', peak ' + d.value.toFixed(1) + ' MW'
+        : d.date + ': nothing detected'),
+      label: 'Daily peak FRP in this cell'
+    });
+    tBlock.appendChild(holder);
+    const legendRow = el('div', 'daylog-legend');
+    [['#e2892f', 'Detected'], ['#ff6b2c', 'This detection'], ['rgba(255,255,255,.25)', 'Quiet day']].forEach(([c, t]) => {
+      const span = el('span');
+      const i = el('i');
+      i.style.background = c;
+      span.append(i, document.createTextNode(t));
+      legendRow.appendChild(span);
+    });
+    tBlock.appendChild(legendRow);
+  }
+
+  if (isTrue(row.agri_season_context)) {
     tBlock.appendChild(el('div', 'note warn',
       'Inside a crop-residue burning belt during its burning season. The evidence score is discounted accordingly unless the registries or the temperature say otherwise.'));
   }
@@ -713,11 +879,9 @@ function openDetail(id) {
     'Esri World Imagery at the detection coordinate. Imagery date differs from the detection date.'));
   body.appendChild(iBlock);
 
-  $('#detail').hidden = false;
-  if (window.innerWidth <= 860) $('#sidepane').classList.add('open');
-
   // Leaflet needs the container to have its final size before it initialises.
   requestAnimationFrame(() => {
+    if (!document.body.contains(holder)) return;
     if (contextMap) { contextMap.remove(); contextMap = null; }
     contextMap = L.map(holder, {
       center: [row.latitude, row.longitude], zoom: 15,
@@ -734,70 +898,27 @@ function openDetail(id) {
 
     if (row.nearest_facility_lat) {
       L.circleMarker([row.nearest_facility_lat, row.nearest_facility_lon], {
-        radius: 5, color: '#5aa2e8', weight: 1.5, fillOpacity: 0.3, fillColor: '#5aa2e8'
+        radius: 5, color: '#f5efe6', weight: 1.5, fillOpacity: 0.35, fillColor: '#d6b67a'
       }).addTo(contextMap).bindTooltip(row.nearest_facility_name || 'Registered site');
     }
     contextMap.invalidateSize();
   });
-
-  const marker = markerById.get(id);
-  if (marker) map.setView([row.latitude, row.longitude], Math.max(map.getZoom(), 9));
-
-  // Deep link, so a detection can be sent to someone rather than described.
-  const url = new URL(window.location);
-  url.searchParams.set('detection', id);
-  history.replaceState(null, '', url);
 }
 
-/* Daily FRP for the grid cell this detection sits in — the series the
-   persistence and change-point features are computed from. */
-function cellSeries(row) {
+/* Daily peak FRP for the grid cell this detection sits in, across the whole
+   window: the series the persistence and change-point features come from. */
+function cellDays(row) {
   const lat = Math.round(row.latitude * 100) / 100;
   const lon = Math.round(row.longitude * 100) / 100;
   const byDate = new Map();
   state.rows.forEach((r) => {
-    if (Math.round(r.latitude * 100) / 100 !== lat) return;
-    if (Math.round(r.longitude * 100) / 100 !== lon) return;
-    const key = r.acq_date;
-    byDate.set(key, Math.max(byDate.get(key) || 0, Number(r.frp) || 0));
+    if (r.grid_lat !== lat || r.grid_lon !== lon) return;
+    const cur = byDate.get(r.acq_date) || { value: 0, count: 0 };
+    cur.value = Math.max(cur.value, Number(r.frp) || 0);
+    cur.count += 1;
+    byDate.set(r.acq_date, cur);
   });
-  return [...byDate.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-}
-
-function sparkline(series) {
-  const w = 360, h = 44, pad = 4;
-  const max = Math.max(...series.map((s) => s[1]), 1);
-  const stepX = series.length > 1 ? (w - pad * 2) / (series.length - 1) : 0;
-
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
-  svg.setAttribute('class', 'spark');
-  svg.setAttribute('role', 'img');
-  svg.setAttribute('aria-label', 'Daily peak FRP for this cell');
-
-  const points = series.map((s, i) => [
-    pad + i * stepX,
-    h - pad - (s[1] / max) * (h - pad * 2)
-  ]);
-
-  const path = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-  path.setAttribute('points', points.map((p) => p.join(',')).join(' '));
-  path.setAttribute('fill', 'none');
-  path.setAttribute('stroke', '#e2892f');
-  path.setAttribute('stroke-width', '1.4');
-  svg.appendChild(path);
-
-  points.forEach(([x, y], i) => {
-    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    c.setAttribute('cx', x); c.setAttribute('cy', y); c.setAttribute('r', '2');
-    c.setAttribute('fill', '#e2892f');
-    const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-    title.textContent = series[i][0] + ' — ' + series[i][1].toFixed(2) + ' MW';
-    c.appendChild(title);
-    svg.appendChild(c);
-  });
-
-  return svg;
+  return windowDays().map((date) => Object.assign({ date, value: 0, count: 0 }, byDate.get(date)));
 }
 
 /* =========================================================
@@ -815,8 +936,13 @@ function renderWatchCount() {
 async function openSite(uid) {
   if (!uid) return;
 
-  const site = await fetch('/api/site/' + uid).then((r) => r.json());
-  if (site.error) return;
+  let site;
+  try {
+    site = await fetch('/api/site/' + encodeURIComponent(uid)).then((r) => r.json());
+  } catch (e) {
+    return;
+  }
+  if (!site || site.error) return;
 
   const identity = site.identity || {};
   const summary = site.summary || {};
@@ -845,57 +971,88 @@ async function openSite(uid) {
   const body = $('#s-body');
   body.innerHTML = '';
 
+  if (summary.detections) {
+    const windowLength = summary.window_days || site.daily.length || 1;
+
+    const actBlock = block('Thermal activity in this window');
+    actBlock.appendChild(tiles([
+      [String(summary.detections), 'Detections'],
+      [summary.days_active + ' / ' + windowLength, 'Days active', summary.days_active / windowLength, '#e2892f'],
+      [num(summary.max_frp, 1) + ' MW', 'Peak FRP'],
+      [summary.max_temp_k ? Math.round(summary.max_temp_k) + ' K' : 'n/a', 'Peak temperature'],
+      [num(summary.night_fraction), 'Night share', summary.night_fraction, '#d6b67a'],
+      [num(summary.max_risk), 'Highest priority', summary.max_risk, '#e05252']
+    ]));
+    const seen = el('div', 'note');
+    seen.style.marginTop = '8px';
+    seen.textContent = 'First seen ' + summary.first_seen + ', last seen ' + summary.last_seen + '.';
+    actBlock.appendChild(seen);
+    body.appendChild(actBlock);
+
+    const dayBlock = block('Daily log');
+    const log = el('div', 'daylog');
+    C.timeline(log, site.daily, {
+      value: (d) => d.max_frp,
+      color: (d) => (d.detections && d.night === d.detections ? '#d6b67a' : '#e2892f'),
+      tip: (d) => (d.detections
+        ? d.date + ': ' + d.detections + ' detection' + (d.detections > 1 ? 's' : '')
+          + ', peak ' + d.max_frp.toFixed(1) + ' MW' + (d.night ? ', ' + d.night + ' at night' : '')
+        : d.date + ': nothing detected'),
+      label: 'Daily peak FRP at this site'
+    });
+    dayBlock.appendChild(log);
+    const legendRow = el('div', 'daylog-legend');
+    [['#e2892f', 'Day or mixed'], ['#d6b67a', 'Night only'], ['rgba(255,255,255,.25)', 'Quiet day']].forEach(([c, t]) => {
+      const span = el('span');
+      const i = el('i');
+      i.style.background = c;
+      span.append(i, document.createTextNode(t));
+      legendRow.appendChild(span);
+    });
+    dayBlock.appendChild(legendRow);
+    dayBlock.appendChild(el('div', 'note',
+      'Every day of the window is shown, quiet ones included, so gaps in activity are real gaps. Bar height is that day\'s peak FRP.'));
+    body.appendChild(dayBlock);
+
+    const mixBlock = block('What was seen here');
+    const two = el('div', 'two-col');
+    const labelsHost = el('div');
+    C.donut(labelsHost, CLASS_ORDER.filter((k) => (summary.labels || {})[k]).map((k) => ({
+      label: CLASS_META[k].short, value: summary.labels[k], color: CLASS_META[k].color
+    })), { size: 104, thickness: 16, sub: 'detections', label: 'Classification at this site' });
+    two.appendChild(labelsHost);
+    const regimeHost = el('div');
+    const regimes = Object.entries(summary.temp_classes || {}).sort((a, b) => b[1] - a[1]);
+    if (regimes.length) {
+      C.hbars(regimeHost, regimes.map(([k, v]) => ({
+        label: TEMP_CLASS_LABEL[k] || k, value: v, color: REGIME_COLOR[k] || '#e2892f'
+      })));
+    }
+    two.appendChild(regimeHost);
+    mixBlock.appendChild(two);
+    body.appendChild(mixBlock);
+  } else {
+    const none = block('Thermal activity in this window');
+    none.appendChild(el('div', 'note', 'No detections attributed to this site in the current snapshot.'));
+    body.appendChild(none);
+  }
+
   const idBlock = block('Registry identity');
   idBlock.appendChild(kvList([
-    ['Listed by', String(identity.sources_present || '—').toUpperCase().replace(/\|/g, ' · ')],
+    ['Listed by', String(identity.sources_present || '-').toUpperCase().replace(/\|/g, ' · ')],
     ['Sources agreeing', String(identity.source_agreement || 0)],
-    ['Type', String(identity.ftype || '—').replace(/_/g, ' ')],
+    ['Type', String(identity.ftype || '-').replace(/_/g, ' ')],
     ['Operating status', identity.status || 'unknown'],
     ['Capacity', identity.capacity_value
-      ? num(identity.capacity_value, 0) + ' ' + (identity.capacity_unit || '') : '—'],
+      ? num(identity.capacity_value, 0) + ' ' + (identity.capacity_unit || '') : '-'],
     ['Coordinates', identity.lat
-      ? Number(identity.lat).toFixed(4) + ', ' + Number(identity.lon).toFixed(4) : '—'],
+      ? Number(identity.lat).toFixed(4) + ', ' + Number(identity.lon).toFixed(4) : '-'],
     ['Registry records', String(identity.record_count || 0)]
   ]));
   body.appendChild(idBlock);
 
-  if (summary.detections) {
-    const actBlock = block('Thermal activity in this window');
-    actBlock.appendChild(kvList([
-      ['Detections', String(summary.detections)],
-      ['Days active', String(summary.days_active)],
-      ['First seen', summary.first_seen],
-      ['Last seen', summary.last_seen],
-      ['Peak FRP', num(summary.max_frp, 2) + ' MW'],
-      ['Peak retrieved temperature', summary.max_temp_k ? Math.round(summary.max_temp_k) + ' K' : 'not retrieved'],
-      ['Night fraction', num(summary.night_fraction)],
-      ['Highest priority', num(summary.max_risk)]
-    ]));
-    body.appendChild(actBlock);
-
-    const dayBlock = block('Daily activity');
-    const max = Math.max(...site.daily.map((d) => d.max_frp), 1);
-    const bars = el('div', 'daybars');
-    const labels = el('div', 'daylabels');
-
-    site.daily.forEach((day) => {
-      const col = el('div', 'col');
-      const fill = el('i', day.night === day.detections ? 'night' : null);
-      fill.style.height = Math.max(3, (day.max_frp / max) * 100) + '%';
-      fill.title = day.date + ' — ' + day.detections + ' detections, peak '
-        + day.max_frp.toFixed(2) + ' MW';
-      col.appendChild(fill);
-      bars.appendChild(col);
-      labels.appendChild(el('span', null, day.date.slice(5)));
-    });
-
-    dayBlock.appendChild(bars);
-    dayBlock.appendChild(labels);
-    dayBlock.appendChild(el('div', 'note',
-      'Bar height is that day\'s peak FRP. Purple means every detection that day was at night.'));
-    body.appendChild(dayBlock);
-
-    const listBlock = block('Detections at this site');
+  if (site.detections && site.detections.length) {
+    const listBlock = block('Latest detections at this site');
     site.detections.slice(0, 40).forEach((detection) => {
       const meta = CLASS_META[detection.final_label] || CLASS_META.insufficient_evidence;
       const row = el('button', 'item');
@@ -925,10 +1082,6 @@ async function openSite(uid) {
       listBlock.appendChild(row);
     });
     body.appendChild(listBlock);
-  } else {
-    const none = block('Thermal activity in this window');
-    none.appendChild(el('div', 'note', 'No detections attributed to this site in the current snapshot.'));
-    body.appendChild(none);
   }
 
   $('#detail').hidden = true;
@@ -940,6 +1093,7 @@ function closeSite() {
 }
 
 function closeDetail() {
+  detailToken += 1;
   $('#detail').hidden = true;
   const url = new URL(window.location);
   url.searchParams.delete('detection');
@@ -1019,9 +1173,13 @@ function wireControls() {
     else map.removeLayer(gibsLayer);
   });
 
+  // Every filter change re-clusters the whole snapshot, so typing and
+  // dragging wait for a pause instead of redrawing on each keystroke.
+  const refilter = debounce(applyFilters, 180);
+
   $('#search').addEventListener('input', (e) => {
     state.search = e.target.value;
-    applyFilters();
+    refilter();
   });
 
   $('#sort').addEventListener('change', (e) => {
@@ -1039,7 +1197,7 @@ function wireControls() {
   $('#minscore').addEventListener('input', (e) => {
     state.minScore = Number(e.target.value);
     $('#minscore-v').textContent = state.minScore.toFixed(2);
-    applyFilters();
+    refilter();
   });
 
   $('#d-back').addEventListener('click', closeDetail);
@@ -1145,23 +1303,50 @@ function wireSheet() {
    BOOT
 ========================================================= */
 
+/* /api/map sends columns once, value rows, and lookup tables for repeated
+   strings. Rebuild plain row objects here so the rest of the file is
+   unaware of the transport format. */
+function decodeMap(payload) {
+  const cols = payload.columns;
+  const dicts = cols.map((c) => (payload.dictionaries || {})[c] || null);
+  const loaded = payload.sources_loaded || '';
+  return payload.rows.map((values) => {
+    const row = { sources_loaded: loaded };
+    for (let i = 0; i < cols.length; i += 1) {
+      const v = values[i];
+      row[cols[i]] = dicts[i] ? dicts[i][v] : (v === null ? '' : v);
+    }
+    row.grid_lat = Math.round(row.latitude * 100) / 100;
+    row.grid_lon = Math.round(row.longitude * 100) / 100;
+    return row;
+  });
+}
+
+function debounce(fn, ms) {
+  let timer = null;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), ms);
+  };
+}
+
 async function boot() {
-  const [stats, sources, rows] = await Promise.all([
+  const [stats, sources, payload] = await Promise.all([
     fetch('/api/stats').then((r) => r.json()),
     fetch('/api/sources').then((r) => r.json()),
-    fetch('/api/detections').then((r) => r.json())
+    fetch('/api/map').then((r) => r.json())
   ]);
 
   state.watch = loadWatch();
   state.stats = stats;
   state.sources = sources.sources || [];
-  state.rows = rows;
+  state.rows = decodeMap(payload);
 
-  $('#p-snap').textContent = stats.snapshot_id || '—';
+  $('#p-snap').textContent = stats.snapshot_id || '-';
   $('#p-range').textContent = stats.date_range
-    ? stats.date_range[0] + ' → ' + stats.date_range[1] : '—';
-  $('#p-method').textContent = 'v' + (stats.method_version || '—');
-  $('#p-build').textContent = stats.build || '—';
+    ? stats.date_range[0] + ' → ' + stats.date_range[1] : '-';
+  $('#p-method').textContent = 'v' + (stats.method_version || '-');
+  $('#p-build').textContent = stats.build || '-';
 
   renderMetrics();
   renderSources();
