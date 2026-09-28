@@ -55,11 +55,17 @@ VIIRS_DROP_CLASSES = {"l"}
 # Preference order when collapsing duplicates of the same fire.
 CONFIDENCE_RANK = {"h": 3, "n": 2, "l": 1}
 SENSOR_RANK = {
-    "VIIRS_NOAA21_NRT": 4,   # newest VIIRS
-    "VIIRS_NOAA20_NRT": 3,
-    "VIIRS_SNPP_NRT": 2,
-    "MODIS_NRT": 1,          # 1 km pixel, coarsest
+    "VIIRS_NOAA21": 4,   # newest VIIRS
+    "VIIRS_NOAA20": 3,
+    "VIIRS_SNPP": 2,
+    "MODIS": 1,          # 1 km pixel, coarsest
 }
+
+
+def sensor_rank(source_sensor) -> int:
+    """Rank regardless of processing level (_NRT from the API, _SP from archives)."""
+    platform = str(source_sensor).rsplit("_", 1)[0]
+    return SENSOR_RANK.get(platform, 0)
 
 
 def confidence_rank(value):
@@ -137,7 +143,7 @@ def main():
 
     # --- 3. cross-sensor dedup ------------------------------------
     fires["_conf_rank"] = fires["confidence"].apply(confidence_rank)
-    fires["_sensor_rank"] = fires["source_sensor"].map(SENSOR_RANK).fillna(0)
+    fires["_sensor_rank"] = fires["source_sensor"].map(sensor_rank)
     fires["_grid_lat"] = fires["latitude"].round(GRID_DECIMALS)
     fires["_grid_lon"] = fires["longitude"].round(GRID_DECIMALS)
 

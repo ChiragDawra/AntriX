@@ -4,11 +4,13 @@
     python run_pipeline.py                  # everything, then serve
     python run_pipeline.py --no-serve       # everything, no web app
     python run_pipeline.py --skip-fetch     # reuse the FIRMS pull already on disk
+    python run_pipeline.py --from-archive   # FIRMS download zips in data/firms/
     python run_pipeline.py --refresh-registry   # re-download the four registries
 
 Stages:
 
     1. FIRMS pull            fetch_data_v3.py   -> firms_raw.csv
+                             (or load_firms_archive.py for multi-month zips)
     2. Cleaning              clean_detections.py-> firms_clean.csv
     3. Facility registry     build_registry.py  -> data/registry/
     4. Analysis              run_analysis.py    -> firms_final.csv, clusters.csv
@@ -39,7 +41,9 @@ def main() -> None:
     argv = sys.argv[1:]
     serve = "--no-serve" not in argv
 
-    if "--skip-fetch" in argv:
+    if "--from-archive" in argv:
+        run("load_firms_archive.py")
+    elif "--skip-fetch" in argv:
         if not (ROOT / "firms_raw.csv").exists():
             sys.exit("--skip-fetch given but firms_raw.csv does not exist.")
         print("Skipping the FIRMS pull; reusing firms_raw.csv")
