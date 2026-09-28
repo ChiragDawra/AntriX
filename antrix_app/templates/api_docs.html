@@ -1,145 +1,261 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>SATAT — API</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png"/>
-<link rel="icon" type="image/png" sizes="192x192" href="/static/favicon-192.png"/>
-<link rel="apple-touch-icon" href="/static/apple-touch-icon.png"/>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
-      rel="stylesheet" media="print" onload="this.media='all'">
-<link rel="stylesheet" href="/static/pages.css">
-</head>
-<body>
+{% extends "_base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}API{% endblock %}
+{% block page %}api{% endblock %}
 
-<header class="bar">
-  <a class="brand" href="/">SATAT</a>
-  <nav>
-    <a href="/">Dashboard</a>
-    <a href="/validation">Validation</a>
-    <a href="/data-dictionary">Columns</a>
-    <a href="/api/docs" aria-current="page">API</a>
-  </nav>
-</header>
+{% block content %}
+{% set filters = [
+  ('label', 'Classification', ['persistent_industrial_source', 'industrial_fire', 'flare_signature', 'agricultural_burning', 'insufficient_evidence'], 'label=industrial_fire'),
+  ('sources', 'Corroborating registry, any of', ['osm', 'wri', 'gem', 'eog'], 'sources=gem,wri'),
+  ('risk', 'Priority band', ['Critical', 'High', 'Moderate', 'Low'], 'risk=Critical,High'),
+  ('temp_class', 'Combustion regime', ['flare_like', 'furnace_like', 'mixed', 'biomass_like', 'smouldering', 'unknown'], 'temp_class=furnace_like'),
+  ('min_score', 'Minimum risk_score', ['0 to 1'], 'min_score=0.6'),
+  ('min_fusion', 'Minimum anomaly_probability', ['0 to 1'], 'min_fusion=0.5'),
+  ('from, to', 'Date range, inclusive', ['YYYY-MM-DD'], 'from=2026-09-01&to=2026-09-28'),
+  ('bbox', 'Bounding box', ['lon_min,lat_min,lon_max,lat_max'], 'bbox=85,21,88,24.5'),
+  ('q', 'Facility name contains', ['free text'], 'q=steel'),
+] %}
+{% set endpoints = [
+  ('/api/detections', '/api/detections?label=flare_signature,persistent_industrial_source&min_score=0.6', 'Scored detections, filtered. Returns the evidence columns; the CSV export returns all of them.', ['JSON', 'filters']),
+  ('/api/detection/<detection_id>', None, 'One detection, every column, with contributions already parsed into an array.', ['JSON']),
+  ('/api/site/<facility_uid>', None, 'One facility: registry identity, activity summary, a day-by-day log across the whole window, and its latest detections.', ['JSON']),
+  ('/api/map', '/api/map', 'Every detection with only the fields the map draws, column-oriented, with repeated strings sent once in lookup tables. Gzipped when the client accepts it.', ['JSON', 'compact']),
+  ('/api/clusters', '/api/clusters', 'Spatio-temporal clusters: centroid, span, dominant class and regime, confirming registries.', ['JSON']),
+  ('/api/facilities', '/api/facilities?source=gem&limit=20', 'The cross-referenced facility registry, one row per real-world site. Optional source, bbox and limit (default 4000).', ['JSON']),
+  ('/api/sources', '/api/sources', 'Per-registry status, record counts, licensing, and how many detections each corroborates.', ['JSON']),
+  ('/api/stats', '/api/stats', 'Snapshot id, date window, per-class counts, method version and the running build.', ['JSON']),
+] %}
+{% set exports = [
+  ('/api/export/detections.csv', '/api/export/detections.csv?label=flare_signature', 'Every column, filtered. Filename carries the snapshot id.', 'CSV'),
+  ('/api/export/detections.geojson', '/api/export/detections.geojson?label=flare_signature', 'The same rows as a FeatureCollection, for QGIS or ArcGIS.', 'GeoJSON'),
+  ('/api/export/clusters.csv', '/api/export/clusters.csv', 'Cluster summaries.', 'CSV'),
+  ('/api/export/facilities.csv', '/api/export/facilities.csv?source=wri', 'The facility registry. Optional source.', 'CSV'),
+  ('/api/export/site/<facility_uid>.csv', None, 'Every detection attributed to one site: the investigation packet for a single facility.', 'CSV'),
+] %}
+{% set window = snapshot.get('date_range') or ['-', '-'] %}
 
-<main>
-  <h1>API</h1>
-  <p class="lede">
-    Read-only JSON and CSV. No key, no rate limit, same data the dashboard
-    draws from.
-  </p>
-
-  <h2>Filters</h2>
-  <p>
-    These apply to <code>/api/detections</code>,
-    <code>/api/export/detections.csv</code> and
-    <code>/api/export/detections.geojson</code> identically — the server
-    reuses one filter implementation, so an export always matches the screen
-    it was taken from.
-  </p>
-
-  <table>
-    <thead><tr><th style="width:26%">Parameter</th><th>Accepts</th></tr></thead>
-    <tbody>
-      <tr><td class="mono">label</td><td>Comma-separated: <code>persistent_industrial_source</code>, <code>industrial_fire</code>, <code>flare_signature</code>, <code>agricultural_burning</code>, <code>insufficient_evidence</code></td></tr>
-      <tr><td class="mono">sources</td><td>Comma-separated registry keys: <code>osm</code>, <code>wri</code>, <code>gem</code>, <code>eog</code>. Keeps detections corroborated by any of them.</td></tr>
-      <tr><td class="mono">risk</td><td><code>Critical</code>, <code>High</code>, <code>Moderate</code>, <code>Low</code></td></tr>
-      <tr><td class="mono">temp_class</td><td><code>flare_like</code>, <code>furnace_like</code>, <code>mixed</code>, <code>biomass_like</code>, <code>smouldering</code>, <code>unknown</code></td></tr>
-      <tr><td class="mono">min_score</td><td>Float 0–1, minimum <code>risk_score</code></td></tr>
-      <tr><td class="mono">min_fusion</td><td>Float 0–1, minimum <code>anomaly_probability</code></td></tr>
-      <tr><td class="mono">from, to</td><td><code>YYYY-MM-DD</code>, inclusive</td></tr>
-      <tr><td class="mono">bbox</td><td><code>lon_min,lat_min,lon_max,lat_max</code></td></tr>
-      <tr><td class="mono">q</td><td>Substring match on the matched facility name</td></tr>
-    </tbody>
-  </table>
-
-  <h2>Endpoints</h2>
-
-  <div class="endpoint">
-    <div class="head"><span class="method">GET</span><span class="path">/api/detections</span>
-      <a class="try" href="/api/detections?label=flare_signature,persistent_industrial_source">try it</a></div>
-    <div class="body">
-      <p>Scored detections, filtered. Returns the columns the map and feed use; the CSV export returns all of them.</p>
+<section class="hero">
+  <div>
+    <div class="hero-title">
+      <div class="hero-icon">{{ icon('api') }}</div>
+      <div>
+        <h1>API</h1>
+        <div class="kicker">Everything on the map, as JSON, CSV or GeoJSON</div>
+      </div>
     </div>
-  </div>
-
-  <div class="endpoint">
-    <div class="head"><span class="method">GET</span><span class="path">/api/detection/&lt;detection_id&gt;</span></div>
-    <div class="body"><p>One detection, every column, with <code>contributions</code> already parsed into an array.</p></div>
-  </div>
-
-  <div class="endpoint">
-    <div class="head"><span class="method">GET</span><span class="path">/api/clusters</span>
-      <a class="try" href="/api/clusters">try it</a></div>
-    <div class="body"><p>Spatio-temporal clusters: centroid, span, dominant class, dominant combustion regime and which registries confirm them.</p></div>
-  </div>
-
-  <div class="endpoint">
-    <div class="head"><span class="method">GET</span><span class="path">/api/facilities</span>
-      <a class="try" href="/api/facilities?source=gem&limit=20">try it</a></div>
-    <div class="body">
-      <p>The cross-referenced facility registry, one row per real-world site. Optional <code>source</code> and <code>bbox</code>; <code>limit</code> defaults to 4000.</p>
-    </div>
-  </div>
-
-  <div class="endpoint">
-    <div class="head"><span class="method">GET</span><span class="path">/api/sources</span>
-      <a class="try" href="/api/sources">try it</a></div>
-    <div class="body">
-      <p>Per-registry status, record counts, licensing and how many detections each one corroborates. A registry that failed to load reports <code>unavailable</code> and why.</p>
-    </div>
-  </div>
-
-  <div class="endpoint">
-    <div class="head"><span class="method">GET</span><span class="path">/api/stats</span>
-      <a class="try" href="/api/stats">try it</a></div>
-    <div class="body"><p>Snapshot id, date window, per-class counts, method version and the running build.</p></div>
-  </div>
-
-  <h2>Exports</h2>
-
-  <div class="endpoint">
-    <div class="head"><span class="method">GET</span><span class="path">/api/export/detections.csv</span>
-      <a class="try" href="/api/export/detections.csv?label=flare_signature">try it</a></div>
-    <div class="body"><p>Every column, filtered. Filename carries the snapshot id.</p></div>
-  </div>
-
-  <div class="endpoint">
-    <div class="head"><span class="method">GET</span><span class="path">/api/export/detections.geojson</span></div>
-    <div class="body"><p>The same rows as a FeatureCollection, for QGIS or ArcGIS.</p></div>
-  </div>
-
-  <div class="endpoint">
-    <div class="head"><span class="method">GET</span><span class="path">/api/export/clusters.csv</span></div>
-    <div class="body"><p>Cluster summaries.</p></div>
-  </div>
-
-  <div class="endpoint">
-    <div class="head"><span class="method">GET</span><span class="path">/api/export/facilities.csv</span></div>
-    <div class="body"><p>The facility registry. Optional <code>source</code>.</p></div>
-  </div>
-
-  <div class="endpoint">
-    <div class="head"><span class="method">GET</span><span class="path">/api/export/site/&lt;facility_uid&gt;.csv</span></div>
-    <div class="body"><p>Every detection attributed to one site — the investigation packet for a single facility.</p></div>
-  </div>
-
-  <h2>Example</h2>
-  <div class="panel">
-    <p style="margin:0 0 8px" class="mono" style="font-size:12px">
-      curl "http://localhost:5000/api/export/detections.csv?label=persistent_industrial_source&amp;sources=gem,wri&amp;min_score=0.5" -o sites.csv
+    <p class="lede">
+      Read-only. No key, no rate limit, and the same snapshot the dashboard draws from.
+      One filter implementation serves the JSON and the exports, so a download always
+      matches the screen it was taken from.
     </p>
-    <p style="margin:0;font-size:12px;color:var(--dim)">
-      Persistent industrial sources confirmed by GEM or WRI, priority 0.5 and above.
-    </p>
+    <div class="chips">
+      <span class="chip"><span class="dot"></span><b>{{ endpoints|length + exports|length }}</b> endpoints</span>
+      <span class="chip"><b>{{ filters|length }}</b> filters</span>
+      <span class="chip">JSON &middot; CSV &middot; GeoJSON</span>
+    </div>
   </div>
+  <div class="hero-art">
+    <div class="minis">
+      <div class="mini"><b>{{ '{:,}'.format(page_data.detections) }}</b><span>detections</span></div>
+      <div class="mini"><b>{{ '{:,}'.format(page_data.sites) }}</b><span>active sites</span></div>
+      <div class="mini"><b>{{ '{:,}'.format(page_data.clusters) }}</b><span>clusters</span></div>
+      <div class="mini"><b>{{ '{:,}'.format(page_data.facilities) }}</b><span>registry sites</span></div>
+    </div>
+  </div>
+</section>
 
-  <div class="note">
-    Licensing travels with the data: OSM is ODbL, WRI and GEM are CC BY 4.0.
-    <code>/api/sources</code> returns the exact attribution string for each.
+<div class="panel">
+  <div class="panel-head">{{ icon('layers') }}<h2>How a request flows</h2></div>
+  <div class="flow">
+    <div class="flow-step"><span class="n">{{ '{:,}'.format(page_data.detections) }}</span><span class="t">Snapshot</span><span class="d">scored detections, {{ window[0] }} to {{ window[1] }}</span></div>
+    <span class="flow-arrow" aria-hidden="true">&rsaquo;</span>
+    <div class="flow-step"><span class="n">{{ filters|length }}</span><span class="t">Filters</span><span class="d">label, sources, risk, regime, scores, dates, bbox, name</span></div>
+    <span class="flow-arrow" aria-hidden="true">&rsaquo;</span>
+    <div class="flow-step"><span class="n">{{ endpoints|length + exports|length }}</span><span class="t">Endpoints</span><span class="d">detections, sites, clusters, registry, status</span></div>
+    <span class="flow-arrow" aria-hidden="true">&rsaquo;</span>
+    <div class="flow-step"><span class="n">3</span><span class="t">Formats</span><span class="d">JSON for apps, CSV for spreadsheets, GeoJSON for GIS</span></div>
   </div>
-</main>
-</body>
-</html>
+</div>
+
+<div class="section-title">{{ icon('filter') }} Filters <span class="sub">apply to /api/detections and both detection exports</span></div>
+<div class="grid grid-3">
+  {% for name, what, accepts, example in filters %}
+  <div class="panel param">
+    <div class="param-head"><code>{{ name }}</code><span>{{ what }}</span></div>
+    <div class="tags">{% for a in accepts %}<span class="tag">{{ a }}</span>{% endfor %}</div>
+    <div class="param-eg mono">?{{ example }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="section-title">{{ icon('api') }} Endpoints <span class="sub">press Try to call the live service</span></div>
+<div class="grid grid-2">
+  {% for path, try_url, desc, tags in endpoints %}
+  <div class="panel endpoint">
+    <div class="ep-head">
+      <span class="method">GET</span>
+      <code class="path">{{ path }}</code>
+      {% if try_url %}<button class="try" type="button" data-try="{{ try_url }}">Try</button>{% endif %}
+    </div>
+    <p>{{ desc }}</p>
+    <div class="tags">{% for t in tags %}<span class="tag">{{ t }}</span>{% endfor %}</div>
+    {% if try_url %}
+    <div class="ep-result" hidden>
+      <div class="ep-meta"></div>
+      <pre></pre>
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+<div class="section-title">{{ icon('download') }} Exports</div>
+<div class="grid grid-2">
+  {% for path, url, desc, fmt in exports %}
+  <div class="panel endpoint">
+    <div class="ep-head">
+      <span class="method">GET</span>
+      <code class="path">{{ path }}</code>
+      {% if url %}<a class="try" href="{{ url }}">Download</a>{% endif %}
+    </div>
+    <p>{{ desc }}</p>
+    <div class="tags"><span class="tag">{{ fmt }}</span></div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="section-title">{{ icon('copy') }} Example</div>
+<div class="panel">
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-tab="curl">curl</button>
+    <button role="tab" aria-selected="false" data-tab="python">Python</button>
+    <button role="tab" aria-selected="false" data-tab="js">JavaScript</button>
+  </div>
+  {% set base = request.host_url.rstrip('/') %}
+  {% set samples = {
+    'curl': 'curl "' ~ base ~ '/api/export/detections.csv?label=persistent_industrial_source&sources=gem,wri&min_score=0.5" -o sites.csv',
+    'python': 'import pandas as pd\n\nurl = "' ~ base ~ '/api/export/detections.csv"\nsites = pd.read_csv(url + "?label=persistent_industrial_source&sources=gem,wri&min_score=0.5")\nprint(sites.groupby("nearest_facility_name")["risk_score"].max().nlargest(10))',
+    'js': 'const res = await fetch("' ~ base ~ '/api/detections?label=persistent_industrial_source&min_score=0.5");\nconst rows = await res.json();\nconsole.log(rows.length, rows[0].nearest_facility_name);'
+  } %}
+  {% for key, code in samples.items() %}
+  <div class="sample" data-panel="{{ key }}"{% if key != 'curl' %} hidden{% endif %}>
+    <pre>{{ code }}</pre>
+    <button class="copy" type="button" data-copy="{{ code }}" aria-label="Copy example">{{ icon('copy') }}</button>
+  </div>
+  {% endfor %}
+  <p>Persistent industrial sources confirmed by GEM or WRI, priority 0.5 and above.</p>
+</div>
+
+<div class="callout">{{ icon('info') }}<div>
+  <b>Licensing travels with the data.</b> OSM is ODbL; WRI and GEM are CC BY 4.0.
+  <code>/api/sources</code> returns the exact attribution string for each.
+</div></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+  function chip(text, ok) {
+    const span = document.createElement('span');
+    span.className = 'pill' + (ok === true ? ' ok' : '');
+    if (ok !== undefined) { const d = document.createElement('span'); d.className = 'dot'; span.appendChild(d); }
+    span.appendChild(document.createTextNode(String(text)));
+    return span;
+  }
+
+  document.querySelectorAll('[data-try]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const box = btn.closest('.endpoint').querySelector('.ep-result');
+      const meta = box.querySelector('.ep-meta');
+      const pre = box.querySelector('pre');
+      if (!box.hidden && btn.dataset.loaded) { box.hidden = true; btn.textContent = 'Try'; return; }
+      box.hidden = false;
+      meta.textContent = 'Calling ' + btn.dataset.try + ' ...';
+      pre.textContent = '';
+      const t0 = performance.now();
+      try {
+        const res = await fetch(btn.dataset.try);
+        const text = await res.text();
+        const ms = Math.round(performance.now() - t0);
+        const kb = (new Blob([text]).size / 1024).toFixed(1);
+        const pills = [chip(res.status, res.ok), chip(ms + ' ms'), chip(kb + ' KB')];
+        let preview = text;
+        try {
+          const body = JSON.parse(text);
+          if (Array.isArray(body)) {
+            pills.push(chip(body.length.toLocaleString() + ' rows'));
+            preview = JSON.stringify(body.slice(0, 2), null, 2)
+              + (body.length > 2 ? '\n... ' + (body.length - 2).toLocaleString() + ' more rows' : '');
+          } else {
+            if (Array.isArray(body.rows)) pills.push(chip(body.rows.length.toLocaleString() + ' rows'));
+            preview = JSON.stringify(body, (k, v) => (
+              Array.isArray(v) && v.length > 6 ? v.slice(0, 6).concat(['... ' + (v.length - 6).toLocaleString() + ' more']) : v
+            ), 2);
+          }
+        } catch (e) { /* not JSON: show the text as-is */ }
+        meta.innerHTML = '';
+        meta.append(...pills);
+        pre.textContent = preview.length > 4000 ? preview.slice(0, 4000) + '\n...' : preview;
+        btn.textContent = 'Hide';
+        btn.dataset.loaded = '1';
+      } catch (err) {
+        meta.textContent = 'Request failed: ' + err.message;
+      }
+    });
+  });
+
+  document.querySelectorAll('.tabs [data-tab]').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tabs [data-tab]').forEach((t) => t.setAttribute('aria-selected', String(t === tab)));
+      document.querySelectorAll('.sample').forEach((p) => { p.hidden = p.dataset.panel !== tab.dataset.tab; });
+    });
+  });
+})();
+</script>
+<style>
+.minis { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mini {
+  padding: 12px; border-radius: 11px; text-align: center;
+  background: rgba(0, 0, 0, .25); border: 1px solid rgba(226, 137, 47, .18);
+}
+.mini b { display: block; font: 600 19px var(--mono); color: var(--accent-2); }
+.mini span { font-size: 10px; letter-spacing: .07em; text-transform: uppercase; color: var(--dim); }
+.param { display: flex; flex-direction: column; gap: 10px; }
+.param-head { display: flex; flex-direction: column; gap: 4px; }
+.param-head code { align-self: flex-start; color: var(--accent-2); background: rgba(226, 137, 47, .08); border-color: rgba(226, 137, 47, .25); font-size: 12.5px; }
+.param-head span { font-size: 12.5px; color: var(--text-2); }
+.param .tag { font-size: 10.5px; padding: 3px 7px; }
+.param-eg { margin-top: auto; font-size: 11px; color: var(--dim); background: rgba(0,0,0,.25); padding: 6px 9px; border-radius: 7px; overflow-x: auto; white-space: nowrap; }
+.grid:has(> .endpoint) { align-items: start; }
+.endpoint { display: flex; flex-direction: column; gap: 10px; }
+.endpoint p { margin: 0; }
+.ep-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.method { font: 600 10.5px var(--mono); color: #bfe3c9; background: rgba(90, 174, 118, .12); border: 1px solid rgba(90, 174, 118, .35); padding: 3px 8px; border-radius: 6px; }
+.ep-head .path { background: none; border: none; padding: 0; font-size: 13px; color: var(--text); word-break: break-all; }
+.try {
+  margin-left: auto; font: 500 11.5px var(--sans); color: #fff4e6; text-decoration: none; cursor: pointer;
+  padding: 6px 13px; border-radius: 8px; border: 1px solid rgba(226, 137, 47, .5);
+  background: linear-gradient(90deg, rgba(226, 137, 47, .35), rgba(181, 83, 42, .25));
+}
+.try:hover { background: linear-gradient(90deg, rgba(226, 137, 47, .5), rgba(181, 83, 42, .35)); }
+.ep-result { border-top: 1px dashed var(--line); padding-top: 10px; }
+.ep-result[hidden] { display: none; }
+.ep-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; font-size: 11.5px; color: var(--dim); }
+.ep-result pre, .sample pre {
+  font: 11.5px/1.5 var(--mono); color: var(--text-2);
+  background: rgba(0, 0, 0, .32); border: 1px solid var(--line); border-radius: 9px;
+  padding: 11px 13px; overflow: auto; max-height: 300px; white-space: pre;
+}
+.tabs { display: inline-flex; gap: 2px; padding: 3px; border-radius: 9px; background: rgba(0,0,0,.25); border: 1px solid var(--line); margin-bottom: 10px; }
+.tabs button { font: 500 12px var(--sans); color: var(--dim); background: none; border: none; padding: 6px 12px; border-radius: 7px; cursor: pointer; }
+.tabs button[aria-selected="true"] { color: #fff4e6; background: rgba(226, 137, 47, .28); }
+.sample { position: relative; }
+.sample[hidden] { display: none; }
+.sample .copy { position: absolute; top: 8px; right: 8px; }
+@media (max-width: 860px) {
+  .mini b { font-size: 16px; }
+  .tabs button { padding: 9px 12px; }
+  .try { padding: 10px 15px; }
+}
+</style>
+{% endblock %}

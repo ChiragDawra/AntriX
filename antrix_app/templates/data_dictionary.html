@@ -1,57 +1,219 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>SATAT — Column reference</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png"/>
-<link rel="icon" type="image/png" sizes="192x192" href="/static/favicon-192.png"/>
-<link rel="apple-touch-icon" href="/static/apple-touch-icon.png"/>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
-      rel="stylesheet" media="print" onload="this.media='all'">
-<link rel="stylesheet" href="/static/pages.css">
-</head>
-<body>
+{% extends "_base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Column reference{% endblock %}
+{% block page %}columns{% endblock %}
 
-<header class="bar">
-  <a class="brand" href="/">SATAT</a>
-  <nav>
-    <a href="/">Dashboard</a>
-    <a href="/validation">Validation</a>
-    <a href="/data-dictionary" aria-current="page">Columns</a>
-    <a href="/api/docs">API</a>
-  </nav>
-</header>
+{% block content %}
+{% set section_icons = {
+  'Identity': 'pin', 'Radiometry': 'flame', 'Sub-pixel physics': 'target',
+  'Baseline and abnormality': 'trend', 'Temporal behaviour': 'clock',
+  'Facility registry': 'db', 'Seasonal context': 'layers', 'Scores': 'grid',
+  'Classification': 'validation'
+} %}
+{% set ns = namespace(total=0) %}
+{% for section, rows in columns %}{% for name, d in rows %}{% set ns.total = ns.total + (name.replace(' / ', ', ').split(', ')|length) %}{% endfor %}{% endfor %}
 
-<main>
-  <h1>Column reference</h1>
-  <p class="lede">
-    Every column in the detections CSV and the <code>/api/detections</code>
-    response, and what it actually means.
-  </p>
-
-  {% for section, rows in columns %}
-  <h2>{{ section }}</h2>
-  <table>
-    <thead><tr><th style="width:33%">Column</th><th>Meaning</th></tr></thead>
-    <tbody>
-      {% for name, description in rows %}
-      <tr>
-        <td class="mono" style="color:var(--text-2)">{{ name }}</td>
-        <td style="color:var(--text-2)">{{ description }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% endfor %}
-
-  <div class="note">
-    Booleans export as <code>True</code>/<code>False</code>. Empty means the
-    value could not be computed for that row — which, for
-    <code>est_temp_k</code>, is a statement about the observation rather than
-    a gap in the data.
+<section class="hero">
+  <div>
+    <div class="hero-title">
+      <div class="hero-icon">{{ icon('columns') }}</div>
+      <div>
+        <h1>Column reference</h1>
+        <div class="kicker">What every field means, and what it looks like in this snapshot</div>
+      </div>
+    </div>
+    <p class="lede">
+      Every column in the detections CSV and the <code>/api/detections</code> response.
+      Each card carries a live profile: how often the value is present, and how it is
+      distributed across the {{ '{:,}'.format(page_data.rows) }} detections on the map right now.
+    </p>
+    <div class="chips">
+      <span class="chip"><span class="dot"></span><b>{{ ns.total }}</b> columns</span>
+      <span class="chip"><b>{{ columns|length }}</b> groups</span>
+      <span class="chip"><b>{{ '{:,}'.format(page_data.rows) }}</b> rows profiled</span>
+    </div>
   </div>
-</main>
-</body>
-</html>
+  <div class="hero-art"><div id="groups-donut"></div></div>
+</section>
+
+<div class="panel">
+  <div class="panel-head">{{ icon('layers') }}<h2>How a row is built</h2><span class="sub">pipeline order, click to jump</span></div>
+  <div class="flow">
+    {% for section, rows in columns %}
+      {% set count = namespace(n=0) %}
+      {% for name, d in rows %}{% set count.n = count.n + (name.replace(' / ', ', ').split(', ')|length) %}{% endfor %}
+      <a class="flow-step" href="#{{ section|lower|replace(' ', '-') }}">
+        <span class="n">{{ count.n }}</span>
+        <span class="t">{{ section }}</span>
+      </a>
+      {% if not loop.last %}<span class="flow-arrow" aria-hidden="true">&rsaquo;</span>{% endif %}
+    {% endfor %}
+  </div>
+</div>
+
+<div class="searchbar">
+  {{ icon('search') }}
+  <input id="colsearch" type="search" placeholder="Find a column or a word in its meaning" aria-label="Filter columns">
+  <span id="colcount" class="mono"></span>
+</div>
+
+{% for section, rows in columns %}
+<section class="colsection" id="{{ section|lower|replace(' ', '-') }}">
+  <div class="section-title">{{ icon(section_icons.get(section, 'grid')) }} {{ section }} <span class="sub">{{ rows|length }} entries</span></div>
+  <div class="colgrid">
+    {% for name, description in rows %}
+    {% set names = name.replace(' / ', ', ').split(', ') %}
+    <article class="colcard" data-search="{{ (name ~ ' ' ~ description)|lower }}">
+      <div class="colnames">{% for n in names %}<code>{{ n }}</code>{% endfor %}</div>
+      <p>{{ description }}</p>
+      <div class="profiles">
+        {% for n in names %}<div class="prof" data-col="{{ n }}"></div>{% endfor %}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endfor %}
+
+<div class="callout">{{ icon('info') }}<div>
+  Booleans export as <code>True</code>/<code>False</code>. Empty means the value could not be
+  computed for that row, which for <code>est_temp_k</code> is a statement about the
+  observation rather than a gap in the data.
+</div></div>
+{% endblock %}
+
+{% block scripts %}
+<script id="page-data" type="application/json">{{ {
+  'profiles': page_data.profiles,
+  'rows': page_data.rows,
+  'groups': columns|map('first')|list,
+  'sizes': columns|map('last')|map('length')|list
+}|tojson }}</script>
+<script>
+(() => {
+  const C = window.SatatCharts;
+  const data = JSON.parse(document.getElementById('page-data').textContent);
+  const TONES = ['#e2892f', '#b5532a', '#d6b67a', '#7fa05a', '#e05252', '#ff6b2c', '#c9a15a', '#8f6a3e', '#9aa3b1'];
+
+  C.donut(document.getElementById('groups-donut'), data.groups.map((g, i) => ({
+    label: g, value: data.sizes[i], color: TONES[i % TONES.length]
+  })), { size: 150, thickness: 18, sub: 'entries', legend: false, label: 'Entries per group' });
+
+  const pct = (v) => (v * 100).toFixed(v >= 0.995 || v === 0 ? 0 : 1) + '%';
+
+  document.querySelectorAll('.prof').forEach((node) => {
+    const col = node.dataset.col;
+    const p = data.profiles[col];
+    const name = document.createElement('span');
+    name.className = 'prof-name';
+    name.textContent = col;
+    node.appendChild(name);
+
+    if (!p) {
+      node.classList.add('absent');
+      const note = document.createElement('span');
+      note.className = 'prof-note';
+      note.textContent = 'not in this export';
+      node.appendChild(note);
+      return;
+    }
+
+    const fill = document.createElement('span');
+    fill.className = 'prof-fill';
+    fill.appendChild(C.ring(p.fill, { size: 22, thickness: 6, color: p.fill > 0.9 ? '#7fa05a' : p.fill > 0.4 ? '#e2892f' : '#b5532a' }));
+    const fillText = document.createElement('b');
+    fillText.textContent = pct(p.fill);
+    fill.appendChild(fillText);
+    C.tipped(fill, pct(p.fill) + ' of rows have a value');
+    node.appendChild(fill);
+
+    const viz = document.createElement('span');
+    viz.className = 'prof-viz';
+    const range = document.createElement('span');
+    range.className = 'prof-range';
+    if (p.kind === 'numeric') {
+      C.histogram(viz, p.hist, { edges: p.edges, color: '#e2892f', label: col + ' distribution' });
+      range.textContent = C.fmt(p.min) + ' / ' + C.fmt(p.median) + ' / ' + C.fmt(p.max);
+      C.tipped(range, 'min / median / max');
+    } else if (p.distinct >= data.rows * 0.95) {
+      range.textContent = 'unique per row';
+      C.tipped(range, C.fmt(p.distinct) + ' distinct values across ' + C.fmt(data.rows) + ' rows');
+    } else {
+      const strip = document.createElement('span');
+      strip.className = 'prof-strip';
+      p.top.forEach((t, i) => {
+        const seg = document.createElement('i');
+        seg.style.flex = String(t[1]);
+        seg.style.background = TONES[i % TONES.length];
+        C.tipped(seg, (t[0] === '' ? '(empty)' : t[0]) + ': ' + C.fmt(t[1]) + ' rows');
+        strip.appendChild(seg);
+      });
+      viz.appendChild(strip);
+      const top = p.top[0];
+      range.textContent = p.distinct + ' values' + (top ? ', top ' + String(top[0]).slice(0, 18) : '');
+    }
+    node.appendChild(viz);
+    node.appendChild(range);
+  });
+
+  const cards = [...document.querySelectorAll('.colcard')];
+  const count = document.getElementById('colcount');
+  const update = () => {
+    const q = document.getElementById('colsearch').value.trim().toLowerCase();
+    let shown = 0;
+    cards.forEach((card) => {
+      const hit = !q || card.dataset.search.includes(q);
+      card.hidden = !hit;
+      if (hit) shown += 1;
+    });
+    document.querySelectorAll('.colsection').forEach((sec) => {
+      sec.hidden = ![...sec.querySelectorAll('.colcard')].some((c) => !c.hidden);
+    });
+    count.textContent = shown + ' / ' + cards.length;
+  };
+  document.getElementById('colsearch').addEventListener('input', update);
+  update();
+})();
+</script>
+<style>
+.searchbar {
+  position: sticky; top: 12px; z-index: 5;
+  display: flex; align-items: center; gap: 10px;
+  margin: 18px 0 4px; padding: 10px 14px; border-radius: 11px;
+  background: rgba(20, 19, 18, .9); border: 1px solid var(--line-2);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  color: var(--dim);
+}
+.searchbar input { flex: 1; min-width: 0; background: none; border: none; outline: none; color: var(--text); font: 13.5px var(--sans); }
+.searchbar input::placeholder { color: var(--dim-2); }
+.colgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.colcard {
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--r);
+  padding: 14px 15px; display: flex; flex-direction: column; gap: 9px;
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  transition: border-color .15s;
+}
+.colcard:hover { border-color: rgba(226, 137, 47, .3); }
+.colcard[hidden], .colsection[hidden] { display: none; }
+.colnames { display: flex; flex-wrap: wrap; gap: 5px; }
+.colnames code { color: var(--accent-2); background: rgba(226, 137, 47, .08); border-color: rgba(226, 137, 47, .22); font-size: 12px; }
+.colcard p { color: var(--text-2); font-size: 12.5px; line-height: 1.5; }
+.profiles { display: flex; flex-direction: column; gap: 5px; margin-top: auto; padding-top: 6px; border-top: 1px dashed var(--line); }
+.prof { display: grid; grid-template-columns: minmax(80px, 1fr) 62px minmax(70px, 1.3fr) auto; gap: 10px; align-items: center; min-height: 34px; }
+.prof-name { font: 11px var(--mono); color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prof-fill { display: flex; align-items: center; gap: 5px; }
+.prof-fill b { font: 500 10.5px var(--mono); color: var(--text-2); }
+.prof-viz { display: block; min-width: 0; }
+.prof-strip { display: flex; height: 10px; border-radius: 5px; overflow: hidden; gap: 1px; }
+.prof-strip i { display: block; min-width: 3px; }
+.prof-range { font: 10.5px var(--mono); color: var(--dim); white-space: nowrap; text-align: right; }
+.prof.absent { grid-template-columns: minmax(80px, 1fr) auto; }
+.prof-note { font-size: 11px; color: var(--dim-2); text-align: right; }
+@media (max-width: 860px) {
+  .colgrid { grid-template-columns: minmax(0, 1fr); }
+  .searchbar { top: 66px; }
+  .prof { grid-template-columns: minmax(70px, 1fr) 56px minmax(60px, 1fr); }
+  .prof-range { grid-column: 1 / -1; text-align: left; margin-top: -6px; }
+}
+</style>
+{% endblock %}

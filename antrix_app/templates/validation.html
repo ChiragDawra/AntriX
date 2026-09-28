@@ -1,178 +1,149 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>SATAT — Validation</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png"/>
-<link rel="icon" type="image/png" sizes="192x192" href="/static/favicon-192.png"/>
-<link rel="apple-touch-icon" href="/static/apple-touch-icon.png"/>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
-      rel="stylesheet" media="print" onload="this.media='all'">
-<link rel="stylesheet" href="/static/pages.css">
-</head>
-<body>
+{% extends "_base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Validation{% endblock %}
+{% block page %}validation{% endblock %}
 
-<header class="bar">
-  <a class="brand" href="/">SATAT</a>
-  <nav>
-    <a href="/">Dashboard</a>
-    <a href="/validation" aria-current="page">Validation</a>
-    <a href="/data-dictionary">Columns</a>
-    <a href="/api/docs">API</a>
-  </nav>
-</header>
-
-<main>
-  <h1>Validation</h1>
-  <p class="lede">
-    Snapshot <span class="mono">{{ snapshot.snapshot_id }}</span> ·
-    {{ snapshot.get('date_range', ['?','?'])[0] }} → {{ snapshot.get('date_range', ['?','?'])[1] }} ·
-    method v{{ snapshot.get('method_version', '—') }} · build <span class="mono">{{ build }}</span>
-  </p>
-
-  <p>
-    Everything on this page is recomputed by <code>evaluate.py</code> from the
-    current snapshot. If a number here disagrees with the dashboard, the
-    pipeline has been rerun and this page has not.
-  </p>
-
-  {% if not validation %}
-  <div class="note warn">
-    No validation report found. Run <code>python evaluate.py</code> after
-    <code>python run_analysis.py</code>.
+{% block content %}
+{% set window = snapshot.get('date_range') or ['-', '-'] %}
+<section class="hero">
+  <div>
+    <div class="hero-title">
+      <div class="hero-icon">{{ icon('validation') }}</div>
+      <div>
+        <h1>Validation</h1>
+        <div class="kicker">Do the detected hotspots make sense?</div>
+      </div>
+    </div>
+    <p class="lede">
+      Every number on this page is recomputed by <code>evaluate.py</code> from the
+      current snapshot. If one disagrees with the dashboard, the pipeline has been
+      rerun and this page has not.
+    </p>
+    <div class="chips">
+      <span class="chip"><span class="dot"></span>snapshot <b>{{ snapshot.get('snapshot_id', '-') }}</b></span>
+      <span class="chip">{{ window[0] }} to {{ window[1] }}</span>
+      {% if validation %}<span class="chip"><b>{{ '{:,}'.format(validation.detections) }}</b> detections</span>{% endif %}
+      <span class="chip">method <b>v{{ snapshot.get('method_version', '-') }}</b></span>
+    </div>
   </div>
-  {% else %}
-
-  <h2>What this does and does not measure</h2>
-  <div class="note">
-    SATAT has no field-verified ground truth: nobody has visited these
-    coordinates to confirm what was burning. Claiming an accuracy figure
-    against truth would therefore be an invention. What <em>can</em> be
-    measured is whether the thermal physics and timing alone can predict
-    something they were never shown — whether a detection sits on a site that
-    two or more independent registries agree exists. That is the number below.
+  <div class="hero-art">
+    <div id="footprint"></div>
+    <div class="caption">Thermal footprint, 0.5&deg; cells</div>
   </div>
+</section>
 
-  <h2>Classifier — out-of-fold performance</h2>
-  {% if validation.classifier.available %}
-  <div class="cards">
-    <div class="card"><div class="v">{{ '%.3f'|format(validation.classifier.roc_auc) }}</div><div class="k">ROC AUC</div></div>
-    <div class="card"><div class="v">{{ '%.3f'|format(validation.classifier.average_precision) }}</div><div class="k">Avg precision</div></div>
-    <div class="card"><div class="v">{{ '%.3f'|format(validation.classifier.precision) }}</div><div class="k">Precision</div></div>
-    <div class="card"><div class="v">{{ '%.3f'|format(validation.classifier.recall) }}</div><div class="k">Recall</div></div>
-    <div class="card"><div class="v">{{ '%.3f'|format(validation.classifier.f1) }}</div><div class="k">F1</div></div>
+{% if not validation %}
+<div class="callout warn">{{ icon('warn') }}<div>
+  No validation report found. Run <code>python evaluate.py</code> after <code>python run_analysis.py</code>.
+</div></div>
+{% else %}
+
+<div class="callout">{{ icon('info') }}<div>
+  <b>What this does and does not measure.</b> SATAT has no field-verified ground truth:
+  nobody has visited these coordinates to confirm what was burning. What <em>can</em> be
+  measured is whether thermal physics and timing alone predict something they were
+  never shown: whether a detection sits on a site two or more independent registries
+  agree exists. High scores mean the physics and the registries agree, not that a
+  cause is confirmed.
+</div></div>
+
+{% set clf = validation.classifier %}
+<div class="section-title">{{ icon('target') }} Classifier performance <span class="sub">out-of-fold, whole grid cells held out</span></div>
+{% if clf.available %}
+<div class="stats" id="metric-cards">
+  {% for key, label, tone, ic in [('roc_auc', 'ROC AUC', 'var(--accent)', 'trend'), ('average_precision', 'Avg precision', 'var(--rust)', 'target'), ('precision', 'Precision', 'var(--sand)', 'layers'), ('recall', 'Recall', 'var(--olive)', 'grid'), ('f1', 'F1 score', 'var(--red)', 'trend')] %}
+  <div class="stat" style="--tone:{{ tone }}">
+    <div class="tile">{{ icon(ic) }}</div>
+    <div><div class="v">{{ '%.3f'|format(clf[key]) }}</div><div class="k">{{ label }}</div></div>
+    <div class="ring-wrap" data-ring="{{ clf[key] }}" data-tone="{{ tone }}"></div>
   </div>
-
+  {% endfor %}
+</div>
+<div class="panel" style="margin-top:12px">
   <p>
-    {{ validation.classifier.folds }}-fold stratified cross-validation over
-    {{ validation.classifier.n_positive }} positives and
-    {{ validation.classifier.n_negative }} negatives. Every prediction scored
-    here comes from a fold that did not contain the row being scored.
+    {{ clf.folds }}-fold stratified cross-validation over {{ '{:,}'.format(clf.n_positive) }} positives
+    {% if clf.positive_cells %}({{ '{:,}'.format(clf.positive_cells) }} grid cells){% endif %} and
+    {{ '{:,}'.format(clf.n_negative) }} negatives
+    {% if clf.negative_cells %}({{ '{:,}'.format(clf.negative_cells) }} cells){% endif %}.
+    Every detection of a grid cell is held out together, so no site is scored by a model
+    that trained on its other detections. Over months of data that matters: splitting by
+    row alone let the same plant sit in training and test at once and inflated the score.
   </p>
+</div>
 
-  <h3>Confusion matrix</h3>
-  <table>
-    <thead>
-      <tr><th></th><th class="num">Predicted industrial</th><th class="num">Predicted not</th></tr>
-    </thead>
-    <tbody>
-      <tr>
-        <th>Actually on a multi-registry site</th>
-        <td class="num">{{ validation.classifier.confusion.tp }}</td>
-        <td class="num">{{ validation.classifier.confusion.fn }}</td>
-      </tr>
-      <tr>
-        <th>Actually far from every registry</th>
-        <td class="num">{{ validation.classifier.confusion.fp }}</td>
-        <td class="num">{{ validation.classifier.confusion.tn }}</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <div class="note">{{ validation.classifier.note }}</div>
-
-  <p>
-    Read it this way: an AUC of
-    {{ '%.2f'|format(validation.classifier.roc_auc) }} says the thermal and
-    temporal signature carries real but partial information about whether a
-    detection is industrial. Partial is the point — it is exactly why the
-    final score fuses the model with registry corroboration and an
-    unsupervised outlier score instead of trusting any one of them.
-  </p>
-
-  <h3>Features the model is allowed to see</h3>
-  <p>
-    <code>{{ validation.classifier.features|join('</code>, <code>')|safe }}</code>
-  </p>
-  <p>
-    Distance and corroboration are deliberately absent. Including them would
-    let the model restate its own labels, which is what made the previous
-    version's reported accuracy meaningless.
-  </p>
-  {% else %}
-  <div class="note warn">{{ validation.classifier.reason }}</div>
-  {% endif %}
-
-  <h2>Registry ablation — what each source actually adds</h2>
-  <p>
-    The same detections, scored against different subsets of the four
-    registries. This is the argument for multi-source cross-referencing,
-    stated as a measurement rather than a claim.
-  </p>
-
-  <table>
-    <thead>
-      <tr>
-        <th>Registries</th>
-        <th class="num">Corroborated</th>
-        <th class="num">2+ sources</th>
-        <th class="num">Industrial</th>
-        <th class="num">Persistent</th>
-        <th class="num">Median distance</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for row in validation.ablation %}
-      <tr{% if row.sources|length == 4 %} style="background:var(--surface-2)"{% endif %}>
-        <td class="mono">{{ row.label }}</td>
-        <td class="num">{{ row.corroborated }}</td>
-        <td class="num">{{ row.multi_confirmed }}</td>
-        <td class="num">{{ row.industrial_total }}</td>
-        <td class="num">{{ row.persistent }}</td>
-        <td class="num">
-          {% if row.median_distance_km == row.median_distance_km and row.median_distance_km < 100000 %}
-            {{ '%.1f'|format(row.median_distance_km) }} km
-          {% else %}—{% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-
-  {% set single = validation.ablation | selectattr('sources', 'equalto', ['osm']) | first %}
-  {% set full = validation.ablation | selectattr('sources', 'equalto', ['osm','wri','gem','eog']) | first %}
-  {% if single and full %}
-  <div class="note">
-    On its own, OSM corroborates {{ single.corroborated }} detections and leaves
-    the median detection {{ '%.1f'|format(single.median_distance_km) }} km from
-    anything it lists — its coverage is a handful of industrial belts, not the
-    country. With all loaded registries the median falls to
-    {{ '%.1f'|format(full.median_distance_km) }} km and
-    {{ full.corroborated }} detections are corroborated. No single source gets
-    close to that, which is the entire argument for cross-referencing four of
-    them rather than trusting one.
-  </div>
-  {% endif %}
-
-  <h2>Registry composition</h2>
-  <div class="cards">
-    <div class="card"><div class="v">{{ validation.overlap.total_sites }}</div><div class="k">Distinct sites</div></div>
-    <div class="card"><div class="v">{{ validation.overlap.multi_source_sites }}</div><div class="k">Seen by 2+ sources</div></div>
-    <div class="card"><div class="v">{{ manifest.get('total_records', 0) }}</div><div class="k">Source records</div></div>
+<div class="grid grid-2" style="margin-top:14px">
+  <div class="panel">
+    <div class="panel-head">{{ icon('grid') }}<h2>Confusion matrix</h2><span class="sub">threshold 0.5</span></div>
+    {% set c = clf.confusion %}
+    <div class="cm">
+      <div></div><div class="h">Predicted industrial</div><div class="h">Predicted not</div>
+      <div class="r">On a multi-registry site</div>
+      <div class="cell" style="background:rgba(127,160,90,{{ 0.10 + 0.5 * c.tp / (c.tp + c.fn) if (c.tp + c.fn) else 0.1 }})"><b>{{ '{:,}'.format(c.tp) }}</b><span>true positive</span></div>
+      <div class="cell" style="background:rgba(181,83,42,{{ 0.10 + 0.5 * c.fn / (c.tp + c.fn) if (c.tp + c.fn) else 0.1 }})"><b>{{ '{:,}'.format(c.fn) }}</b><span>missed</span></div>
+      <div class="r">Far from every registry</div>
+      <div class="cell" style="background:rgba(181,83,42,{{ 0.10 + 0.5 * c.fp / (c.fp + c.tn) if (c.fp + c.tn) else 0.1 }})"><b>{{ '{:,}'.format(c.fp) }}</b><span>false alarm</span></div>
+      <div class="cell" style="background:rgba(127,160,90,{{ 0.10 + 0.5 * c.tn / (c.fp + c.tn) if (c.fp + c.tn) else 0.1 }})"><b>{{ '{:,}'.format(c.tn) }}</b><span>true negative</span></div>
+    </div>
+    <p>{{ clf.note }}</p>
   </div>
 
+  <div class="panel">
+    <div class="panel-head">{{ icon('flame') }}<h2>Sub-pixel retrieval coverage</h2><span class="sub">{{ '%.1f'|format(validation.retrieval_rate * 100) }}% retrieved</span></div>
+    <div id="retrieval"></div>
+    <p>
+      The bi-spectral solve returns a temperature only where the observation constrains
+      one. Reporting a number for every pixel would be easy and wrong.
+    </p>
+  </div>
+</div>
+{% else %}
+<div class="callout warn">{{ icon('warn') }}<div>{{ clf.reason }}</div></div>
+{% endif %}
+
+<div class="panel" style="margin-top:14px">
+  <div class="panel-head">{{ icon('clock') }}<h2>Detections per day</h2><span class="sub" id="daily-sub"></span></div>
+  <div id="daily"></div>
+  <div id="daily-legend" style="margin-top:10px"></div>
+</div>
+
+<div class="grid grid-7-5" style="margin-top:14px">
+  <div class="panel">
+    <div class="panel-head">{{ icon('layers') }}<h2>Registry ablation</h2><span class="sub">what each source adds</span></div>
+    <div id="ablation"></div>
+    {% set single = validation.ablation | selectattr('sources', 'equalto', ['osm']) | first %}
+    {% set full = validation.ablation | selectattr('sources', 'equalto', ['osm','wri','gem','eog']) | first %}
+    {% if single and full %}
+    <p>
+      On its own, OSM corroborates {{ '{:,}'.format(single.corroborated) }} detections and leaves the
+      median detection {{ '%.1f'|format(single.median_distance_km) }} km from anything it lists.
+      With every loaded registry the median falls to {{ '%.1f'|format(full.median_distance_km) }} km
+      and {{ '{:,}'.format(full.corroborated) }} detections are corroborated.
+    </p>
+    {% endif %}
+  </div>
+  <div class="stack">
+    <div class="panel">
+      <div class="panel-head">{{ icon('target') }}<h2>Classification</h2></div>
+      <div id="labels-donut"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">{{ icon('flame') }}<h2>Combustion regimes</h2><span class="sub">successful retrievals</span></div>
+      <div id="regimes-donut"></div>
+    </div>
+  </div>
+</div>
+
+<div class="section-title">{{ icon('db') }} Registry composition</div>
+{% set loaded = manifest.get('sources', {}).values() | selectattr('status', 'equalto', 'loaded') | list %}
+<div class="stats">
+  <div class="stat" style="--tone:var(--accent)"><div class="tile">{{ icon('pin') }}</div><div><div class="v">{{ '{:,}'.format(validation.overlap.total_sites) }}</div><div class="k">Distinct sites</div></div></div>
+  <div class="stat" style="--tone:var(--olive)"><div class="tile">{{ icon('layers') }}</div><div><div class="v">{{ '{:,}'.format(validation.overlap.multi_source_sites) }}</div><div class="k">Seen by 2+ sources</div></div></div>
+  <div class="stat" style="--tone:var(--sand)"><div class="tile">{{ icon('db') }}</div><div><div class="v">{{ '{:,}'.format(manifest.get('total_records', 0)) }}</div><div class="k">Source records</div></div></div>
+  <div class="stat" style="--tone:var(--rust)"><div class="tile">{{ icon('grid') }}</div><div><div class="v">{{ loaded|length }} / {{ manifest.get('sources', {})|length }}</div><div class="k">Registries loaded</div></div></div>
+</div>
+
+<div class="panel" style="margin-top:12px">
+  <div class="table-wrap">
   <table>
     <thead>
       <tr><th>Source</th><th>Status</th><th class="num">Records</th><th class="num">Sites</th><th class="num">Confirmed elsewhere</th><th>Licence</th></tr>
@@ -180,84 +151,196 @@
     <tbody>
       {% for key, info in manifest.get('sources', {}).items() %}
       <tr>
-        <td>{{ info.short }}</td>
-        <td>
-          <span class="pill">
-            <span class="dot {{ 'ok' if info.status == 'loaded' else 'off' }}"></span>
-            {{ info.status }}
-          </span>
-        </td>
-        <td class="num">{{ info.records }}</td>
-        <td class="num">{{ validation.overlap.per_source.get(key, {}).get('sites', 0) }}</td>
-        <td class="num">{{ validation.overlap.per_source.get(key, {}).get('confirmed_by_other', 0) }}</td>
-        <td style="font-size:11px;color:var(--dim)">{{ info.license }}</td>
+        <td><b>{{ info.short }}</b></td>
+        <td><span class="pill {{ 'ok' if info.status == 'loaded' else '' }}"><span class="dot"></span>{{ info.status }}</span></td>
+        <td class="num">{{ '{:,}'.format(info.records) }}</td>
+        <td class="num">{{ '{:,}'.format(validation.overlap.per_source.get(key, {}).get('sites', 0)) }}</td>
+        <td class="num">{{ '{:,}'.format(validation.overlap.per_source.get(key, {}).get('confirmed_by_other', 0)) }}</td>
+        <td style="font-size:11.5px;color:var(--dim)">{{ info.license }}</td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
-
-  {% for key, info in manifest.get('sources', {}).items() %}
-    {% if info.status != 'loaded' and info.hint %}
-    <div class="note warn"><b>{{ info.short }}</b> is not loaded. {{ info.hint }}</div>
-    {% endif %}
-  {% endfor %}
-
-  <h2>Sub-pixel retrieval coverage</h2>
-  <p>
-    The bi-spectral solve returns a temperature only where the observation
-    constrains one. Reporting a number for every pixel would be easy and
-    wrong: below, the honest breakdown.
-  </p>
-
-  <table>
-    <thead><tr><th>Status</th><th class="num">Detections</th><th style="width:38%"></th></tr></thead>
-    <tbody>
-      {% set total = validation.detections %}
-      {% for status, count in validation.retrieval_status.items() %}
-      <tr>
-        <td class="mono">{{ status }}</td>
-        <td class="num">{{ count }}</td>
-        <td>
-          <div class="bar-cell">
-            <span class="track"><i class="fill" style="width:{{ (count / total * 100)|round(1) }}%"></i></span>
-            <span class="mono" style="font-size:11px;color:var(--dim)">{{ (count / total * 100)|round(1) }}%</span>
-          </div>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-
-  <div class="note">
-    Two limits worth stating before anyone asks. FIRMS publishes the two
-    I-band channels; NOAA EOG's Nightfire, which catalogues flares for a
-    living, uses several short-wave M-bands that constrain high temperatures
-    far better. And VIIRS I4 saturates at 367 K, above which the retrieval
-    returns a floor rather than a value. Both mean the very hottest sources
-    are the ones SATAT is least able to pin down from this feed — so a
-    snapshot can legitimately contain zero <code>flare_signature</code>
-    detections. That is the honest answer, not a broken feature.
   </div>
+</div>
 
-  <h3>Combustion regimes among successful retrievals</h3>
-  <table>
-    <thead><tr><th>Regime</th><th class="num">Detections</th></tr></thead>
-    <tbody>
-      {% for name, count in validation.temp_class_counts.items() %}
-      <tr><td class="mono">{{ name }}</td><td class="num">{{ count }}</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-
-  <h2>Reproducing this</h2>
-  <div class="panel">
-    <p style="margin:0 0 6px"><code>python build_registry.py</code> — fetch and cross-reference the four registries</p>
-    <p style="margin:0 0 6px"><code>python fetch_data_v3.py && python clean_detections.py</code> — pull and clean FIRMS</p>
-    <p style="margin:0 0 6px"><code>python run_analysis.py</code> — physics, timing, scoring, classification</p>
-    <p style="margin:0"><code>python evaluate.py</code> — regenerate this page's numbers</p>
-  </div>
-
+{% for key, info in manifest.get('sources', {}).items() %}
+  {% if info.status != 'loaded' and info.hint %}
+  <div class="callout warn">{{ icon('warn') }}<div><b>{{ info.short }} is not loaded.</b> {{ info.hint }}</div></div>
   {% endif %}
-</main>
-</body>
-</html>
+{% endfor %}
+
+<div class="grid grid-2" style="margin-top:14px">
+  <div class="panel">
+    <div class="panel-head">{{ icon('api') }}<h2>Reproducing this</h2></div>
+    <div class="cmds">
+      {% for cmd, what in [
+        ('python build_registry.py', 'fetch and cross-reference the four registries'),
+        ('python load_firms_archive.py', 'unpack the FIRMS download zips in data/firms/'),
+        ('python clean_detections.py', 'confidence filter, India clip, cross-sensor dedup'),
+        ('python run_analysis.py', 'physics, timing, scoring, classification'),
+        ('python evaluate.py', "regenerate this page's numbers")] %}
+      <div class="cmd">
+        <span class="step">{{ loop.index }}</span>
+        <code>{{ cmd }}</code>
+        <button class="copy" type="button" data-copy="{{ cmd }}" aria-label="Copy command">{{ icon('copy') }}</button>
+        <span class="what">{{ what }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-head">{{ icon('layers') }}<h2>Features the model sees</h2><span class="sub">importance</span></div>
+    <div id="features"></div>
+    <p>
+      Distance and corroboration are deliberately absent. Including them would let the
+      model restate its own labels, which is what made an earlier version's accuracy
+      meaningless.
+    </p>
+  </div>
+</div>
+
+<div class="callout">{{ icon('info') }}<div>
+  <b>Two limits worth stating.</b> FIRMS publishes two I-band channels; NOAA EOG's Nightfire,
+  which catalogues flares, uses short-wave M-bands that constrain high temperatures far
+  better. And VIIRS I4 saturates at 367 K, above which the retrieval returns a floor. The
+  hottest sources are the ones SATAT pins down least, so a snapshot can legitimately
+  contain almost no <code>flare_signature</code> detections.
+</div></div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if validation %}
+<script id="page-data" type="application/json">{{ {
+  'daily': page_data.daily,
+  'footprint': page_data.footprint,
+  'labels': page_data.labels,
+  'features': page_data.feature_importance,
+  'retrieval': page_data.retrieval,
+  'regimes': page_data.regimes,
+  'ablation': page_data.ablation
+}|tojson }}</script>
+<script>
+(() => {
+  const C = window.SatatCharts;
+  const data = JSON.parse(document.getElementById('page-data').textContent);
+  const $ = (id) => document.getElementById(id);
+
+  const CLASS = {
+    persistent_industrial_source: ['Persistent industrial', '#e2892f'],
+    industrial_fire: ['Industrial fire', '#e05252'],
+    flare_signature: ['Flare signature', '#ff6b2c'],
+    agricultural_burning: ['Agricultural', '#7fa05a'],
+    insufficient_evidence: ['Insufficient evidence', '#9aa3b1']
+  };
+  const REGIME = {
+    flare_like: ['Flare-like', '#ff6b2c'], furnace_like: ['Furnace-like', '#e05252'],
+    mixed: ['Mixed', '#e2892f'], biomass_like: ['Biomass-like', '#7fa05a'],
+    smouldering: ['Smouldering', '#d6b67a'], unknown: ['Not retrieved', '#6a6560']
+  };
+
+  document.querySelectorAll('[data-ring]').forEach((node) => {
+    const tone = getComputedStyle(node.closest('.stat')).getPropertyValue('--tone').trim() || '#e2892f';
+    node.appendChild(C.ring(Number(node.dataset.ring), { color: tone, size: 42 }));
+  });
+
+  C.dotmap($('footprint'), data.footprint || []);
+
+  if ($('retrieval')) {
+    const order = ['ok', 'saturated_lower_bound', 'weak_11um', 'below_background', 'no_bracket', 'unconstrained', 'no_data'];
+    const rank = (k) => (order.indexOf(k) < 0 ? 99 : order.indexOf(k));
+    const colors = { ok: '#7fa05a', saturated_lower_bound: '#d6b67a' };
+    const items = Object.entries(data.retrieval || {})
+      .sort((a, b) => rank(a[0]) - rank(b[0]))
+      .map(([k, v]) => ({ label: k, value: v, color: colors[k] || '#e2892f' }));
+    C.hbars($('retrieval'), items, { showShare: true });
+  }
+
+  const order = ['persistent_industrial_source', 'industrial_fire', 'flare_signature', 'agricultural_burning', 'insufficient_evidence'];
+  const series = order.filter((k) => data.daily.series[k]).map((k) => ({
+    key: k, label: CLASS[k][0], color: CLASS[k][1], values: data.daily.series[k]
+  }));
+  C.stacked($('daily'), data.daily.dates, series);
+  $('daily-legend').appendChild(C.legend(series.map((s) => ({
+    label: s.label, color: s.color, value: s.values.reduce((a, b) => a + b, 0)
+  })), { inline: true }));
+  $('daily-sub').textContent = data.daily.dates.length + ' days';
+
+  C.donut($('labels-donut'), order.filter((k) => data.labels[k]).map((k) => ({
+    label: CLASS[k][0], value: data.labels[k], color: CLASS[k][1]
+  })), { size: 132, thickness: 16, sub: 'detections', label: 'Classification' });
+
+  const regimes = Object.entries(data.regimes || {}).filter(([k]) => k !== 'unknown');
+  C.donut($('regimes-donut'), regimes.map(([k, v]) => ({
+    label: (REGIME[k] || [k])[0], value: v, color: (REGIME[k] || [k, '#e2892f'])[1]
+  })), { size: 132, thickness: 16, sub: 'retrieved', label: 'Combustion regimes' });
+
+  const rows = (data.ablation || []).filter((r) => r.corroborated > 0 || r.sources.length > 1);
+  const maxC = Math.max(...rows.map((r) => r.corroborated), 1);
+  const usable = (v) => Number.isFinite(v) && v < 1e5;
+  const maxD = Math.max(...rows.map((r) => r.median_distance_km).filter(usable), 1);
+  const bar = (fraction, color, text) => {
+    const cell = document.createElement('span');
+    cell.className = 'ab-bar';
+    const track = document.createElement('span');
+    track.className = 'ab-track';
+    const fill = document.createElement('i');
+    fill.style.width = (fraction * 100).toFixed(1) + '%';
+    fill.style.background = color;
+    track.appendChild(fill);
+    const label = document.createElement('b');
+    label.textContent = text;
+    cell.append(track, label);
+    return cell;
+  };
+  const table = document.createElement('div');
+  table.className = 'ablation';
+  const head = document.createElement('div');
+  head.className = 'ab-row ab-head';
+  ['Registries', 'Detections corroborated', 'Median distance to a site'].forEach((t) => {
+    const span = document.createElement('span'); span.textContent = t; head.appendChild(span);
+  });
+  table.appendChild(head);
+  rows.forEach((r) => {
+    const row = document.createElement('div');
+    row.className = 'ab-row' + (r.sources.length === 4 ? ' full' : '');
+    const name = document.createElement('span');
+    name.className = 'ab-name';
+    name.textContent = r.label;
+    const d = usable(r.median_distance_km) ? r.median_distance_km : null;
+    row.append(
+      name,
+      bar(r.corroborated / maxC, '#e2892f', C.fmt(r.corroborated)),
+      bar(d === null ? 0 : d / maxD, '#d6b67a', d === null ? '-' : d.toFixed(1) + ' km')
+    );
+    C.tipped(row, r.label + ': ' + C.fmt(r.corroborated) + ' corroborated, ' + C.fmt(r.multi_confirmed)
+      + ' by 2+ sources, ' + C.fmt(r.industrial_total) + ' classed industrial');
+    table.appendChild(row);
+  });
+  $('ablation').appendChild(table);
+
+  const feats = Object.entries(data.features || {}).sort((a, b) => b[1] - a[1]);
+  if (feats.length) {
+    C.hbars($('features'), feats.map(([k, v]) => ({ label: k, value: v, color: '#d6b67a' })), { digits: 3 });
+  }
+})();
+</script>
+<style>
+.ablation { display: flex; flex-direction: column; gap: 5px; }
+.ab-row { display: grid; grid-template-columns: minmax(100px, 1.1fr) 1.4fr 1.4fr; gap: 14px; align-items: center; padding: 6px 9px; border-radius: 8px; border: 1px solid transparent; }
+.ab-row:not(.ab-head):hover { background: rgba(255, 255, 255, .03); }
+.ab-row.full { background: rgba(226, 137, 47, .08); border-color: rgba(226, 137, 47, .24); }
+.ab-head { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); }
+.ab-name { font: 500 11.5px var(--mono); color: var(--text-2); }
+.ab-bar { display: flex; align-items: center; gap: 9px; }
+.ab-track { flex: 1; height: 10px; border-radius: 5px; background: rgba(255, 255, 255, .06); overflow: hidden; }
+.ab-track i { display: block; height: 100%; border-radius: 5px; min-width: 2px; }
+.ab-bar b { font: 500 11.5px var(--mono); color: var(--text); min-width: 62px; text-align: right; }
+@media (max-width: 640px) {
+  .ab-row { grid-template-columns: 1fr; gap: 5px; }
+  .ab-head { display: none; }
+}
+</style>
+{% endif %}
+{% endblock %}
