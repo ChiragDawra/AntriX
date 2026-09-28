@@ -10,37 +10,17 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
       rel="stylesheet" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="/static/shell.css">
 <link rel="stylesheet" href="/static/charts.css">
 <link rel="stylesheet" href="/static/pages.css">
 </head>
-{% from "_icons.html" import icon %}
 <body data-page="{% block page %}{% endblock %}">
 <div class="backdrop" aria-hidden="true"><div class="glow"></div></div>
-<div class="shell">
-  <aside class="side">
-    <a class="brand" href="/">
-      <img src="/static/favicon-192.png" alt="" width="36" height="36">
-      <span><b>SATAT</b><small>Industrial thermal<br>anomaly detection</small></span>
-    </a>
-    <nav aria-label="Pages">
-      {% set here = self.page() %}
-      {% for key, href, label in [('dashboard', '/', 'Dashboard'), ('validation', '/validation', 'Validation'), ('columns', '/data-dictionary', 'Columns'), ('api', '/api/docs', 'API')] %}
-      <a href="{{ href }}"{% if here == key %} aria-current="page"{% endif %}>{{ icon(key) }}<span>{{ label }}</span></a>
-      {% endfor %}
-    </nav>
-    <div class="side-foot">
-      <div><span>Snapshot</span><b class="mono">{{ snapshot.get('snapshot_id', '-') }}</b></div>
-      {% set window = snapshot.get('date_range') or ['-', '-'] %}
-      <div><span>Window</span><b class="mono">{{ window[0] }}<br>{{ window[1] }}</b></div>
-      <div><span>Method</span><b class="mono">v{{ snapshot.get('method_version', '-') }}</b></div>
-      <div><span>Build</span><b class="mono">{{ build }}</b></div>
-    </div>
-  </aside>
+{% with active = self.page(), timebar = false %}{% include "_appbar.html" %}{% endwith %}
 
-  <main>
-    {% block content %}{% endblock %}
-  </main>
-</div>
+<main>
+  {% block content %}{% endblock %}
+</main>
 <script src="/static/charts.js"></script>
 <script>
 document.querySelectorAll('[data-copy]').forEach((btn) => {

@@ -1,5 +1,5 @@
-/* Shared shell for the reference pages: a sidebar, a warm thermal backdrop,
-   and panels that carry charts rather than paragraphs. */
+/* Reference pages (Validation, Columns, API): panels that carry charts
+   rather than paragraphs. The top bar and backdrop live in shell.css. */
 
 :root {
   --bg: #0b0c0e;
@@ -16,7 +16,6 @@
   --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --r: 12px; --r-sm: 8px;
-  --side: 236px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -31,23 +30,6 @@ body {
   overflow-x: hidden;
 }
 
-/* Warm thermal backdrop: ember glow, rust and a trace of olive over
-   graphite, drifting slowly so it never reads as a flat stock gradient.
-   The glow is larger than the screen so it can drift; the fixed wrapper
-   clips it, or it would widen the page and scroll sideways on phones. */
-.backdrop {
-  position: fixed; inset: 0; z-index: -2; overflow: hidden; pointer-events: none;
-}
-.backdrop .glow {
-  position: absolute; inset: -25%;
-  background:
-    radial-gradient(38% 32% at 82% 10%, rgba(226, 137, 47, .24), transparent 70%),
-    radial-gradient(34% 38% at 12% 88%, rgba(181, 83, 42, .20), transparent 72%),
-    radial-gradient(28% 26% at 58% 58%, rgba(127, 160, 90, .08), transparent 70%),
-    radial-gradient(22% 20% at 30% 20%, rgba(214, 182, 122, .07), transparent 70%),
-    linear-gradient(155deg, #0e0f11 0%, #15110d 48%, #0d0e10 100%);
-  animation: ember 42s ease-in-out infinite alternate;
-}
 body::after {
   content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: .5;
   background-image:
@@ -56,13 +38,6 @@ body::after {
   mask-image: linear-gradient(180deg, rgba(0,0,0,.9), rgba(0,0,0,.25));
   -webkit-mask-image: linear-gradient(180deg, rgba(0,0,0,.9), rgba(0,0,0,.25));
 }
-@keyframes ember {
-  0%   { transform: translate3d(0, 0, 0) scale(1); }
-  50%  { transform: translate3d(-4%, 3%, 0) scale(1.06); }
-  100% { transform: translate3d(3%, -2%, 0) scale(1.02); }
-}
-@media (prefers-reduced-motion: reduce) { .backdrop .glow { animation: none; } }
-
 .mono, .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
 a { color: var(--accent-2); }
@@ -73,51 +48,7 @@ code {
 }
 .ic { width: 18px; height: 18px; flex-shrink: 0; }
 
-/* ----------------------------------------------------------- shell */
-.shell { display: grid; grid-template-columns: var(--side) minmax(0, 1fr); min-height: 100vh; }
-
-.side {
-  position: sticky; top: 0; height: 100vh;
-  display: flex; flex-direction: column; gap: 22px;
-  padding: 18px 14px;
-  background: linear-gradient(180deg, rgba(14, 13, 12, .82), rgba(11, 11, 12, .70));
-  border-right: 1px solid var(--line);
-  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-}
-.brand { display: flex; align-items: center; gap: 11px; text-decoration: none; color: var(--text); padding: 2px 4px; }
-.brand img { width: 38px; height: 38px; border-radius: 9px; background: #f3efe8; padding: 3px; box-shadow: 0 4px 14px rgba(226, 137, 47, .25); }
-.brand b { display: block; font-size: 17px; letter-spacing: .16em; font-weight: 600; }
-.brand small { display: block; font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); line-height: 1.35; margin-top: 2px; }
-
-.side nav { display: flex; flex-direction: column; gap: 3px; }
-.side nav a {
-  display: flex; align-items: center; gap: 11px;
-  padding: 9px 11px; border-radius: 9px;
-  color: var(--text-2); text-decoration: none; font-size: 13px;
-  border: 1px solid transparent;
-  transition: background .15s, color .15s;
-}
-.side nav a:hover { background: rgba(255, 255, 255, .04); color: var(--text); }
-.side nav a[aria-current="page"] {
-  color: #fff4e6;
-  background: linear-gradient(90deg, rgba(226, 137, 47, .34), rgba(181, 83, 42, .16));
-  border-color: rgba(226, 137, 47, .35);
-  box-shadow: 0 6px 18px rgba(181, 83, 42, .18);
-}
-.side nav a[aria-current="page"] .ic { color: var(--accent-2); }
-
-.side-foot {
-  margin-top: auto;
-  display: grid; gap: 9px;
-  padding: 12px; border-radius: 10px;
-  background: rgba(255, 255, 255, .025); border: 1px solid var(--line);
-  font-size: 10px; color: var(--dim);
-}
-.side-foot div { display: flex; justify-content: space-between; gap: 8px; }
-.side-foot span { text-transform: uppercase; letter-spacing: .08em; }
-.side-foot b { font-weight: 500; color: var(--text-2); text-align: right; font-size: 10.5px; }
-
-main { padding: 26px 30px 90px; max-width: 1240px; width: 100%; }
+main { padding: 24px 30px 90px; max-width: 1240px; width: 100%; margin: 0 auto; min-width: 0; }
 
 /* ----------------------------------------------------------- hero */
 .hero {
@@ -309,25 +240,8 @@ a.flow-step:hover { border-color: rgba(226, 137, 47, .45); transform: translateY
 }
 
 @media (max-width: 860px) {
-  /* minmax(0, 1fr), not 1fr: a bare 1fr column grows to its widest child
-     (a code sample, the stage flow) and the page scrolls sideways. */
-  .shell { grid-template-columns: minmax(0, 1fr); }
-  main { min-width: 0; }
-  .side {
-    position: sticky; top: 0; height: auto; z-index: 20;
-    flex-direction: row; align-items: center; gap: 12px;
-    padding: 10px 12px;
-    border-right: none; border-bottom: 1px solid var(--line);
-  }
-  .brand small, .side-foot { display: none; }
-  .brand img { width: 32px; height: 32px; }
-  .brand b { font-size: 15px; }
-  .side nav { flex-direction: row; gap: 2px; overflow-x: auto; scrollbar-width: none; margin-left: auto; }
-  .side nav::-webkit-scrollbar { display: none; }
-  .side nav a { padding: 9px 10px; min-height: 40px; font-size: 12.5px; gap: 7px; white-space: nowrap; }
-  .side nav a .ic { width: 16px; height: 16px; }
   main { padding: 16px 14px 70px; }
-  .hero { grid-template-columns: 1fr; padding: 18px 16px; }
+  .hero { grid-template-columns: minmax(0, 1fr); padding: 18px 16px; }
   .hero h1 { font-size: 23px; }
   .hero-icon { width: 46px; height: 46px; }
   .hero-art { width: 100%; max-width: 280px; justify-self: center; }
@@ -338,10 +252,4 @@ a.flow-step:hover { border-color: rgba(226, 137, 47, .45); transform: translateY
   .stat .v { font-size: 18px; }
   .stat .ring-wrap { display: none; }
   .panel { padding: 14px; }
-}
-
-@media (max-width: 480px) {
-  .side nav a span { display: none; }
-  .side nav a { padding: 9px 11px; }
-  .side nav a[aria-current="page"] span { display: inline; }
 }

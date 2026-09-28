@@ -1,0 +1,54 @@
+{# The one top bar every page shares. `active` names the current page;
+   `timebar` adds the dashboard's date window and playback controls. #}
+<header id="appbar"{% if timebar %} class="has-timebar"{% endif %}>
+  <a id="brand" href="/" aria-label="SATAT dashboard">
+    <span id="mark"><img src="/static/favicon-192.png" alt="" width="30" height="30"></span>
+    <span><span id="wordmark">SATAT</span><span id="subtitle">Industrial thermal anomaly detection</span></span>
+  </a>
+
+  {% if timebar %}
+  <div id="timebar" role="group" aria-label="Date window and playback">
+    <button id="tb-play" type="button" class="tb-btn" aria-pressed="false" aria-label="Play day by day" title="Play day by day (space)">
+      <svg class="i-play" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.6v10.8L13 8z" fill="currentColor"/></svg>
+      <svg class="i-pause" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.6h3v10.8H4zM9 2.6h3v10.8H9z" fill="currentColor"/></svg>
+    </button>
+    <button id="tb-stop" type="button" class="tb-btn ghost" aria-label="Stop playback" title="Stop playback">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="3.5" width="9" height="9" rx="1.5" fill="currentColor"/></svg>
+    </button>
+    <button id="tb-speed" type="button" class="tb-btn ghost tb-speed" title="Playback speed">1x</button>
+    <div id="tb-track">
+      <svg id="tb-hist" preserveAspectRatio="none" aria-hidden="true"></svg>
+      <div id="tb-sel"></div>
+      <input id="tb-from" type="range" min="0" max="1" value="0" step="1" aria-label="Window start date">
+      <input id="tb-to" type="range" min="0" max="1" value="1" step="1" aria-label="Window end date">
+    </div>
+    <div id="tb-read" aria-live="polite">
+      <b id="tb-dates">-</b>
+      <span id="tb-meta">-</span>
+    </div>
+    <select id="tb-preset" aria-label="Date window preset">
+      <option value="all">All</option>
+      <option value="90">90 days</option>
+      <option value="30">30 days</option>
+      <option value="7">7 days</option>
+      <option value="custom" hidden>Custom</option>
+    </select>
+  </div>
+  {% endif %}
+
+  <div id="provenance" aria-label="Data provenance">
+    <span>snapshot <b id="p-snap">{{ snapshot.get('snapshot_id', '-') }}</b></span>
+    {% if not timebar %}
+    {% set window = snapshot.get('date_range') or ['-', '-'] %}
+    <span>window <b id="p-range">{{ window[0] }} to {{ window[1] }}</b></span>
+    <span>method <b id="p-method">v{{ snapshot.get('method_version', '-') }}</b></span>
+    {% endif %}
+    <span>build <b id="p-build">{{ build }}</b></span>
+  </div>
+
+  <nav id="pages" aria-label="Pages">
+    {% for key, href, label in [('dashboard', '/', 'Dashboard'), ('validation', '/validation', 'Validation'), ('columns', '/data-dictionary', 'Columns'), ('api', '/api/docs', 'API')] %}
+    <a href="{{ href }}"{% if active == key %} aria-current="page"{% endif %}>{{ label }}</a>
+    {% endfor %}
+  </nav>
+</header>
