@@ -70,8 +70,11 @@ def main() -> None:
     print(f"\n{report['multi_source_confirmed']} detections confirmed by 2+ registries")
     print(f"{len(clusters)} clusters")
 
-    for f in ("firms_final.csv", "clusters.csv", "data_snapshot.json",
-              "analysis_report.json"):
+    # Months of detections make firms_final.csv tens of MB; the app ships it
+    # gzipped (pandas reads .gz transparently) so the repo and deploy stay small.
+    out.to_csv(APP_DIR / "firms_final.csv.gz", index=False, compression="gzip")
+    (APP_DIR / "firms_final.csv").unlink(missing_ok=True)
+    for f in ("clusters.csv", "data_snapshot.json", "analysis_report.json"):
         shutil.copy(ROOT / f, APP_DIR / f)
     print(f"\nSnapshot {snapshot['snapshot_id']} copied into {APP_DIR.name}/")
 

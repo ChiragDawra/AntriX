@@ -18,3 +18,7 @@ satat_model_v3.pkl
 
 # Local tokensave MCP cache/index db, machine-specific
 .tokensave/
+
+# Full-width analysis output (~70 MB over a multi-month window). Rebuilt by
+# run_analysis.py; the app ships the same rows as antrix_app/firms_final.csv.gz.
+/firms_final.csv

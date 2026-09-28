@@ -135,3 +135,44 @@ def test_clusters_and_facilities(client):
     assert len(facilities) <= 5
     for site in facilities:
         assert "gem" in str(site["sources_present"]).split("|")
+
+
+def test_map_payload_decodes_to_every_detection(client):
+    stats = client.get("/api/stats").get_json()
+    payload = client.get("/api/map").get_json()
+    assert len(payload["rows"]) == stats["total"]
+
+    cols = payload["columns"]
+    for field in ("detection_id", "latitude", "longitude", "final_label", "risk_score"):
+        assert field in cols
+    labels = payload["dictionaries"]["final_label"]
+    first = dict(zip(cols, payload["rows"][0]))
+    assert labels[first["final_label"]] in {
+        "persistent_industrial_source", "industrial_fire", "flare_signature",
+        "agricultural_burning", "insufficient_evidence",
+    }
+
+
+def test_map_payload_is_gzipped_when_accepted(client):
+    response = client.get("/api/map", headers={"Accept-Encoding": "gzip"})
+    assert response.headers.get("Content-Encoding") == "gzip"
+    assert "Accept-Encoding" in response.headers.get("Vary", "")
+
+
+def test_site_daily_log_covers_every_day_of_the_window(client):
+    """Quiet days must be present, or gaps in activity silently disappear."""
+    stats = client.get("/api/stats").get_json()
+    rows = client.get("/api/detections?min_score=0.5").get_json()
+    uid = next((r["facility_uid"] for r in rows if r["facility_uid"]), None)
+    if not uid:
+        pytest.skip("no attributed detections in this snapshot")
+
+    site = client.get(f"/api/site/{uid}").get_json()
+    dates = [d["date"] for d in site["daily"]]
+    assert dates[0] == stats["date_range"][0]
+    assert dates[-1] == stats["date_range"][1]
+    assert len(dates) == len(set(dates))
+    assert sum(d["detections"] for d in site["daily"]) == site["summary"]["detections"]
+    # Latest first, so the list opens on what is happening now.
+    listed = [d["acq_date"] for d in site["detections"]]
+    assert listed == sorted(listed, reverse=True)

@@ -7,6 +7,7 @@ their data out of is a demo, not a tool.
 
 from __future__ import annotations
 
+import gzip
 import io
 import json
 import os
@@ -19,7 +20,11 @@ app = Flask(__name__)
 
 BASE = Path(__file__).resolve().parent
 
-DETECTIONS_FILE = BASE / "firms_final.csv"
+# Multi-month snapshots ship gzipped; a plain CSV is still accepted.
+DETECTIONS_FILE = next(
+    (p for p in (BASE / "firms_final.csv.gz", BASE / "firms_final.csv") if p.exists()),
+    BASE / "firms_final.csv.gz",
+)
 CLUSTERS_FILE = BASE / "clusters.csv"
 FACILITIES_FILE = BASE / "facility_groups.csv"
 SNAPSHOT_FILE = BASE / "data_snapshot.json"
@@ -64,7 +69,7 @@ def _load(path: Path, loader):
 
 
 def detections() -> pd.DataFrame:
-    df = _load(DETECTIONS_FILE, pd.read_csv)
+    df = _load(DETECTIONS_FILE, lambda p: pd.read_csv(p, low_memory=False))
     return df if df is not None else pd.DataFrame()
 
 
@@ -200,6 +205,98 @@ def _geojson(df: pd.DataFrame, lat_col="latitude", lon_col="longitude") -> dict:
 
 
 # --------------------------------------------------------------------------
+# Page data: summaries the reference pages draw as charts
+# --------------------------------------------------------------------------
+
+def _per_snapshot(key: str, compute):
+    """Cache a derived value until the detections file changes."""
+    stamp = DETECTIONS_FILE.stat().st_mtime if DETECTIONS_FILE.exists() else 0.0
+    hit = _cache.get(key)
+    if hit and hit[0] == stamp:
+        return hit[1]
+    value = compute()
+    _cache[key] = (stamp, value)
+    return value
+
+
+INDUSTRIAL_LABELS = ("persistent_industrial_source", "industrial_fire", "flare_signature")
+
+
+def daily_by_class() -> dict:
+    def compute():
+        df = detections()
+        if df.empty:
+            return {"dates": [], "series": {}}
+        table = df.groupby(["acq_date", "final_label"]).size().unstack(fill_value=0)
+        days = pd.date_range(df["acq_date"].min(), df["acq_date"].max(), freq="D").strftime("%Y-%m-%d")
+        table = table.reindex(days, fill_value=0)
+        return {"dates": list(days),
+                "series": {label: [int(v) for v in table[label]] for label in table.columns}}
+    return _per_snapshot("daily_by_class", compute)
+
+
+def footprint(step: float = 0.5) -> list[dict]:
+    def compute():
+        df = detections()
+        if df.empty:
+            return []
+        work = pd.DataFrame({
+            "lat": (df["latitude"] // step) * step + step / 2,
+            "lon": (df["longitude"] // step) * step + step / 2,
+            "ind": df["final_label"].isin(INDUSTRIAL_LABELS),
+        })
+        grouped = work.groupby(["lat", "lon"])["ind"].agg(["size", "mean"]).reset_index()
+        return [{"lat": float(r.lat), "lon": float(r.lon), "n": int(r.size),
+                 "industrial": round(float(r.mean), 3)}
+                for r in grouped.itertuples(index=False)]
+    return _per_snapshot("footprint", compute)
+
+
+def column_profiles() -> dict:
+    """Fill rate plus a histogram or top values for every column."""
+    import numpy as np
+
+    def compute():
+        df = detections()
+        out = {}
+        for col in df.columns:
+            series = df[col]
+            text = series.astype(str).str.strip()
+            present = series.notna() & text.ne("") & text.ne("nan")
+            profile = {"fill": round(float(present.mean()), 4) if len(df) else 0.0}
+            values = series[present]
+
+            if pd.api.types.is_numeric_dtype(series) and not pd.api.types.is_bool_dtype(series) \
+                    and values.nunique() > 6:
+                numeric = values.astype(float)
+                numeric = numeric[np.isfinite(numeric)]
+                lo, hi = numeric.quantile(0.01), numeric.quantile(0.99)
+                clipped = numeric.clip(lo, hi)
+                counts, edges = np.histogram(clipped, bins=18)
+                profile.update({
+                    "kind": "numeric", "hist": counts.tolist(),
+                    "edges": [round(float(e), 4) for e in edges],
+                    "min": round(float(numeric.min()), 4),
+                    "median": round(float(numeric.median()), 4),
+                    "max": round(float(numeric.max()), 4),
+                })
+            else:
+                top = values.astype(str).value_counts().head(5)
+                profile.update({
+                    "kind": "categorical", "distinct": int(values.nunique()),
+                    "top": [[str(k)[:40], int(v)] for k, v in top.items()],
+                })
+            out[col] = profile
+        return out
+    return _per_snapshot("column_profiles", compute)
+
+
+@app.context_processor
+def _shared_page_context():
+    return {"snapshot": snapshot(), "build": BUILD_COMMIT}
+
+
+# --------------------------------------------------------------------------
 # Pages
 # --------------------------------------------------------------------------
 
@@ -208,27 +305,59 @@ def index():
     return render_template("index.html")
 
 
+def _finite(value):
+    """Replace inf/NaN (which JSON.parse rejects) with None, recursively."""
+    if isinstance(value, float):
+        return value if value == value and abs(value) != float("inf") else None
+    if isinstance(value, dict):
+        return {k: _finite(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_finite(v) for v in value]
+    return value
+
+
 @app.route("/validation")
 def validation():
+    df = detections()
+    report = validation_report()
     return render_template(
         "validation.html",
         report=analysis_report(),
-        validation=validation_report(),
+        validation=report,
         manifest=manifest(),
-        snapshot=snapshot(),
-        build=BUILD_COMMIT,
+        page_data=_finite({
+            "daily": daily_by_class(),
+            "footprint": footprint(),
+            "labels": df["final_label"].value_counts().to_dict() if not df.empty else {},
+            "feature_importance": analysis_report().get("model", {}).get("feature_importance", {}),
+            "ablation": report.get("ablation", []),
+            "retrieval": report.get("retrieval_status", {}),
+            "regimes": report.get("temp_class_counts", {}),
+        }),
     )
 
 
 @app.route("/data-dictionary")
 def data_dictionary():
     from data_dictionary import COLUMNS
-    return render_template("data_dictionary.html", columns=COLUMNS, build=BUILD_COMMIT)
+    return render_template(
+        "data_dictionary.html", columns=COLUMNS,
+        page_data={"profiles": column_profiles(), "rows": int(len(detections()))},
+    )
 
 
 @app.route("/api/docs")
 def api_docs():
-    return render_template("api_docs.html", build=BUILD_COMMIT)
+    df = detections()
+    return render_template(
+        "api_docs.html",
+        page_data={
+            "detections": int(len(df)),
+            "sites": int(df["facility_uid"].replace("", pd.NA).nunique()) if not df.empty else 0,
+            "clusters": int(len(clusters())),
+            "facilities": int(len(facilities())),
+        },
+    )
 
 
 # --------------------------------------------------------------------------
@@ -263,6 +392,66 @@ def api_detections():
         return jsonify([])
     cols = [c for c in MAP_COLUMNS if c in df.columns]
     return jsonify(df[cols].fillna("").to_dict(orient="records"))
+
+
+# What the dashboard draws before anything is clicked. A multi-month snapshot
+# is tens of thousands of rows, so the map gets these fields only, as columns
+# plus value rows instead of repeated keys, and the full record is fetched
+# per detection when one is opened.
+MAP_FIELDS = [
+    "detection_id", "latitude", "longitude", "acq_date", "frp", "final_label",
+    "risk_score", "evidence_score", "corroboration_score", "est_temp_k",
+    "recurrence_days", "dist_to_industrial_km", "nearest_facility_name",
+    "facility_uid", "sources_confirming",
+]
+MAP_ROUNDING = {
+    "latitude": 5, "longitude": 5, "frp": 2, "risk_score": 3, "evidence_score": 3,
+    "corroboration_score": 3, "est_temp_k": 0, "dist_to_industrial_km": 2,
+}
+# Heavily repeated strings travel once, in a lookup table, and rows carry an
+# index into it. A site seen 700 times would otherwise send its name 700 times.
+MAP_DICTIONARY = ["acq_date", "final_label", "nearest_facility_name", "facility_uid",
+                  "sources_confirming"]
+
+
+def _map_payload() -> tuple[bytes, bytes]:
+    def compute():
+        df = detections()
+        cols = [c for c in MAP_FIELDS if c in df.columns]
+        frame = df[cols].copy()
+        for col, digits in MAP_ROUNDING.items():
+            if col in frame.columns:
+                frame[col] = frame[col].round(digits)
+
+        dictionaries = {}
+        for col in MAP_DICTIONARY:
+            if col in frame.columns:
+                codes, uniques = pd.factorize(frame[col].fillna(""))
+                frame[col] = codes
+                dictionaries[col] = [str(u) for u in uniques]
+
+        rows = frame.astype(object).where(frame.notna(), None).values.tolist()
+        loaded = str(df["sources_loaded"].iloc[0]) if "sources_loaded" in df.columns and len(df) else ""
+        raw = json.dumps(
+            {"columns": cols, "dictionaries": dictionaries, "rows": rows,
+             "sources_loaded": loaded},
+            separators=(",", ":"), default=str,
+        ).encode()
+        return raw, gzip.compress(raw, 6)
+
+    return _per_snapshot("map_payload", compute)
+
+
+@app.route("/api/map")
+def api_map():
+    raw, packed = _map_payload()
+    if "gzip" in request.headers.get("Accept-Encoding", ""):
+        response = Response(packed, mimetype="application/json")
+        response.headers["Content-Encoding"] = "gzip"
+    else:
+        response = Response(raw, mimetype="application/json")
+    response.headers["Vary"] = "Accept-Encoding"
+    return response
 
 
 @app.route("/api/clusters")
@@ -368,10 +557,20 @@ def api_site(facility_uid):
 
     identity = site.iloc[0].fillna("").to_dict() if not site.empty else {}
 
+    # One entry for every day of the snapshot window, quiet days included.
+    # Listing only the days with detections made a site seen on the 1st and
+    # the 20th look like it burned two days running.
+    window = [str(df["acq_date"].min()), str(df["acq_date"].max())]
     daily = []
     if not subset.empty:
-        grouped = subset.groupby("acq_date")
-        for day, rows in grouped:
+        by_day = {day: rows for day, rows in subset.groupby("acq_date")}
+        for stamp in pd.date_range(window[0], window[1], freq="D"):
+            day = stamp.strftime("%Y-%m-%d")
+            rows = by_day.get(day)
+            if rows is None:
+                daily.append({"date": day, "detections": 0, "max_frp": 0.0,
+                              "max_risk": 0.0, "max_temp_k": None, "night": 0})
+                continue
             daily.append({
                 "date": day,
                 "detections": int(len(rows)),
@@ -383,7 +582,6 @@ def api_site(facility_uid):
                 ),
                 "night": int((rows["daynight"].astype(str).str.upper() == "N").sum()),
             })
-        daily.sort(key=lambda d: d["date"])
 
     summary = {}
     if not subset.empty:
@@ -399,17 +597,21 @@ def api_site(facility_uid):
                 if subset["est_temp_k"].notna().any() else None
             ),
             "labels": subset["final_label"].value_counts().to_dict(),
+            "temp_classes": subset["temp_class"].value_counts().to_dict(),
             "night_fraction": round(float(
                 (subset["daynight"].astype(str).str.upper() == "N").mean()
             ), 3),
+            "window_days": len(daily),
         }
 
+    latest = subset.sort_values(["acq_date", "acq_time"], ascending=False)
     return jsonify({
         "facility_uid": facility_uid,
         "identity": identity,
         "summary": summary,
+        "window": window,
         "daily": daily,
-        "detections": subset.head(200)[
+        "detections": latest.head(200)[
             [c for c in ("detection_id", "acq_date", "acq_time", "daynight", "frp",
                          "est_temp_k", "temp_class", "final_label", "risk_score")
              if c in subset.columns]

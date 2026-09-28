@@ -25,10 +25,11 @@ def detections():
 
 @pytest.fixture(scope="session")
 def final():
-    path = ROOT / "firms_final.csv"
-    if not path.exists():
-        pytest.skip("firms_final.csv not built yet")
-    return pd.read_csv(path)
+    # The root copy is a local build product; the gzipped app copy is committed.
+    for path in (ROOT / "firms_final.csv", ROOT / "antrix_app" / "firms_final.csv.gz"):
+        if path.exists():
+            return pd.read_csv(path, low_memory=False)
+    pytest.skip("firms_final.csv not built yet")
 
 
 @pytest.fixture(scope="session")
