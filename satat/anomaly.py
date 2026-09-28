@@ -22,6 +22,8 @@ real to learn instead of a restatement of its own input.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
@@ -129,11 +131,32 @@ def _weak_labels(df: pd.DataFrame) -> pd.Series:
     return labels
 
 
+def cell_groups(df: pd.DataFrame) -> np.ndarray:
+    """One group id per grid cell, for cross-validation.
+
+    Every detection in a cell shares its recurrence, duty cycle and night
+    fraction. Split by row and a plant seen on sixty days lands in train and
+    test at once, and the score measures memory of that plant, not skill.
+    """
+    lat = df["latitude"].round(config.GRID_DECIMALS).astype(str)
+    lon = df["longitude"].round(config.GRID_DECIMALS).astype(str)
+    return pd.factorize(lat + ":" + lon)[0]
+
+
+def group_folds(y: np.ndarray, groups: np.ndarray, max_folds: int = 5):
+    """Stratified folds that never split a grid cell across train and test."""
+    from sklearn.model_selection import StratifiedGroupKFold
+
+    per_class = min(len(np.unique(groups[y == 1])), len(np.unique(groups[y == 0])))
+    folds = max(2, min(max_folds, per_class))
+    return StratifiedGroupKFold(n_splits=folds, shuffle=True, random_state=42)
+
+
 def add_ml_probability(df: pd.DataFrame, model_path=None) -> tuple[pd.DataFrame, dict]:
     """Calibrated probability that a detection is an industrial thermal source."""
     from sklearn.calibration import CalibratedClassifierCV
     from sklearn.ensemble import RandomForestClassifier
-    from sklearn.model_selection import StratifiedKFold, cross_val_predict
+    from sklearn.model_selection import cross_val_predict
     from sklearn.metrics import roc_auc_score
 
     work = _prepare_matrix(df)
@@ -156,21 +179,23 @@ def add_ml_probability(df: pd.DataFrame, model_path=None) -> tuple[pd.DataFrame,
 
     X = X_all[train_mask.to_numpy()]
     y = labels[train_mask].to_numpy()
+    groups = cell_groups(work)[train_mask.to_numpy()]
 
     base = RandomForestClassifier(
         n_estimators=300, min_samples_leaf=3, class_weight="balanced",
         random_state=42, n_jobs=-1,
     )
-    folds = min(5, int(min((y == 1).sum(), (y == 0).sum())))
-    cv = StratifiedKFold(n_splits=max(folds, 2), shuffle=True, random_state=42)
+    cv = group_folds(y, groups)
+    splits = list(cv.split(X, y, groups))
 
     # Honest metric first: out-of-fold predictions, before the model ever sees
-    # the full training set.
-    oof = cross_val_predict(base, X, y, cv=cv, method="predict_proba")[:, 1]
+    # the full training set, with whole grid cells held out together.
+    oof = cross_val_predict(base, X, y, cv=splits, method="predict_proba")[:, 1]
     report["cv_auc"] = float(roc_auc_score(y, oof)) if len(set(y)) > 1 else float("nan")
-    report["cv_folds"] = cv.get_n_splits()
+    report["cv_folds"] = len(splits)
+    report["cv_grouping"] = "grid_cell"
 
-    model = CalibratedClassifierCV(base, method="isotonic", cv=cv)
+    model = CalibratedClassifierCV(base, method="isotonic", cv=splits)
     model.fit(X, y)
 
     df = df.copy()
@@ -188,7 +213,7 @@ def add_ml_probability(df: pd.DataFrame, model_path=None) -> tuple[pd.DataFrame,
     if model_path:
         import joblib
         joblib.dump({"model": model, "features": ML_FEATURES}, model_path)
-        report["model_path"] = str(model_path)
+        report["model_path"] = Path(model_path).name
 
     return df, report
 

@@ -4,7 +4,8 @@
 Produces validation_report.json, which the /validation page renders:
 
 * cross-validated classifier metrics with a confusion matrix, computed on
-  out-of-fold predictions so no row is scored by a model that saw it
+  out-of-fold predictions with whole grid cells held out, so no detection is
+  scored by a model that saw that site
 * an ablation over the four registries, showing what each one adds to the
   corroboration evidence rather than claiming that more sources is better
 * registry overlap: how much of each source is confirmed by another
@@ -31,7 +32,7 @@ SOURCES = ["osm", "wri", "gem", "eog"]
 def classifier_metrics(df: pd.DataFrame) -> dict:
     """Out-of-fold precision/recall for the weak-label classifier."""
     from sklearn.ensemble import RandomForestClassifier
-    from sklearn.model_selection import StratifiedKFold, cross_val_predict
+    from sklearn.model_selection import cross_val_predict
     from sklearn.metrics import (
         average_precision_score, confusion_matrix, precision_recall_fscore_support,
         roc_auc_score,
@@ -48,13 +49,15 @@ def classifier_metrics(df: pd.DataFrame) -> dict:
 
     X = work.loc[mask, anomaly.ML_FEATURES].to_numpy(dtype=float)
     y = labels[mask].to_numpy()
+    groups = anomaly.cell_groups(work)[mask.to_numpy()]
 
-    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    cv = anomaly.group_folds(y, groups)
+    splits = list(cv.split(X, y, groups))
     model = RandomForestClassifier(
         n_estimators=300, min_samples_leaf=3, class_weight="balanced",
         random_state=42, n_jobs=-1,
     )
-    proba = cross_val_predict(model, X, y, cv=cv, method="predict_proba")[:, 1]
+    proba = cross_val_predict(model, X, y, cv=splits, method="predict_proba")[:, 1]
     predicted = (proba >= 0.5).astype(int)
 
     precision, recall, f1, _ = precision_recall_fscore_support(
@@ -66,7 +69,10 @@ def classifier_metrics(df: pd.DataFrame) -> dict:
         "available": True,
         "n_positive": positives,
         "n_negative": negatives,
-        "folds": 5,
+        "positive_cells": int(len(np.unique(groups[y == 1]))),
+        "negative_cells": int(len(np.unique(groups[y == 0]))),
+        "folds": len(splits),
+        "grouping": "grid_cell",
         "roc_auc": round(float(roc_auc_score(y, proba)), 4),
         "average_precision": round(float(average_precision_score(y, proba)), 4),
         "precision": round(float(precision), 4),

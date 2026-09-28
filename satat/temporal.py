@@ -55,6 +55,18 @@ def _cusum_shift(values: np.ndarray) -> float:
     return float(min(best, 4.0) / 4.0)
 
 
+def _tail(window_days: float, rule: tuple[float, int]) -> int:
+    fraction, floor = rule
+    return max(floor, int(round(window_days * fraction)))
+
+
+def _longest_gap(days: np.ndarray) -> int:
+    """Longest run of dark days strictly between two detection days."""
+    if len(days) < 2:
+        return 0
+    return int(np.diff(np.sort(days)).max() - 1)
+
+
 def add_temporal_features(df: pd.DataFrame) -> pd.DataFrame:
     """Attach per-cell temporal features to every detection."""
     df = df.copy()
@@ -89,32 +101,40 @@ def add_temporal_features(df: pd.DataFrame) -> pd.DataFrame:
             "first_seen_day": float(first_seen),
             "last_seen_day": float(last_seen),
             "active_span_days": float(last_seen - first_seen + 1),
+            "_longest_gap": _longest_gap(unique_days),
         })
 
     cells = pd.DataFrame(rows)
 
-    # Lifecycle. "New" means the cell only started appearing in the last two
-    # days of the window; "ceased" means it was active early and has been dark
-    # since. Both are investigation triggers in their own right: a new
-    # persistent source is an unpermitted start-up, a ceased one is a shutdown.
+    # Lifecycle. "New" means the cell only started appearing at the end of the
+    # window; "ceased" means it was active earlier and has been dark since.
+    # Both are investigation triggers in their own right: a new persistent
+    # source is an unpermitted start-up, a ceased one is a shutdown. The tails
+    # scale with the window, or over four months every cell with a cloudy
+    # fortnight would read as "reactivated".
+    new_tail = _tail(window_days, config.NEW_SOURCE_TAIL)
+    ceased_tail = _tail(window_days, config.CEASED_TAIL)
+    gap = _tail(window_days, config.REACTIVATION_GAP)
+
     cells["new_source"] = (
-        (cells["first_seen_day"] >= window_last - 1) & (cells["recurrence_days"] >= 1)
+        (cells["first_seen_day"] >= window_last - (new_tail - 1))
+        & (cells["recurrence_days"] >= 1)
     )
     cells["ceased"] = (
-        (cells["last_seen_day"] <= window_last - 3) & (cells["recurrence_days"] >= 2)
-    )
-    cells["reactivated"] = (
-        (cells["active_span_days"] > cells["recurrence_days"] + 1)
+        (cells["last_seen_day"] <= window_last - ceased_tail)
         & (cells["recurrence_days"] >= 2)
     )
+    cells["reactivated"] = (
+        (cells["_longest_gap"] >= gap) & (cells["recurrence_days"] >= 2)
+    )
+    cells = cells.drop(columns="_longest_gap")
 
     df = df.drop(columns=[c for c in cells.columns
                           if c in df.columns and c not in ("grid_lat", "grid_lon")])
     df = df.merge(cells, on=["grid_lat", "grid_lon"], how="left")
 
-    df["persistence_norm"] = (
-        df["recurrence_days"] / config.OBSERVATION_WINDOW_DAYS
-    ).clip(0, 1)
+    full = min(window_days, config.PERSISTENCE_FULL_DAYS)
+    df["persistence_norm"] = (df["recurrence_days"] / full).clip(0, 1)
     df["nocturnal_score"] = df["night_fraction"].clip(0, 1)
     df["observation_window_days"] = window_days
 

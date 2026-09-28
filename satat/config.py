@@ -47,8 +47,20 @@ TEMP_CLASS_BANDS = [
 SOLVE_TEMP_RANGE_K = (400.0, 2500.0)
 
 # ---------------------------------------------------------------- temporal
-# FIRMS is pulled over a 5-day window; persistence normalises against it.
-OBSERVATION_WINDOW_DAYS = 5
+# Persistence saturates at this many distinct detection days, or at the whole
+# window if that is shorter. Over a multi-month window, cloud cover (the
+# monsoon especially) and revisit gaps mean even a plant running around the
+# clock is seen on a fraction of days; fifteen distinct days is already
+# unambiguous, while a one-off stubble fire sits at one or two.
+PERSISTENCE_FULL_DAYS = 15
+
+# Lifecycle tails as fractions of the window, with floors that reproduce the
+# original 5-day behaviour: "new" = first seen in the final 10% (>= 2 days),
+# "ceased" = dark for the final 20% (>= 3 days), "reactivated" = a single dark
+# stretch of 15% of the window (>= 2 days) between two active periods.
+NEW_SOURCE_TAIL = (0.10, 2)
+CEASED_TAIL = (0.20, 3)
+REACTIVATION_GAP = (0.15, 2)
 
 # Industrial sources run at night as readily as by day. Agricultural and
 # wildfire burning is overwhelmingly a daytime activity, so a high night

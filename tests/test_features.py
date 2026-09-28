@@ -148,3 +148,39 @@ def test_classification_requires_registry_support():
     # However hot and however persistent: with nothing in any registry there
     # is no industrial claim to make.
     assert labelled["final_label"].iloc[0] == "insufficient_evidence"
+
+
+def _long_cell(day, lat=22.0):
+    date = (pd.Timestamp("2026-06-01") + pd.Timedelta(days=day)).strftime("%Y-%m-%d")
+    return {"latitude": lat, "longitude": 80.0, "frp": 3.0, "daynight": "N", "acq_date": date}
+
+
+def test_persistence_does_not_saturate_over_a_long_window():
+    """Over 120 days, five sightings is not the same as being always on."""
+    rows = [_long_cell(d) for d in (0, 10, 20, 30, 40)]
+    rows += [_long_cell(d, lat=25.0) for d in range(0, 120, 4)]
+    result = temporal.add_temporal_features(pd.DataFrame(rows))
+    sparse = result[result["latitude"] == 22.0]["persistence_norm"].iloc[0]
+    dense = result[result["latitude"] == 25.0]["persistence_norm"].iloc[0]
+    assert sparse < 0.5
+    assert dense == pytest.approx(1.0)
+
+
+def test_a_cloudy_week_is_not_a_reactivation_over_months():
+    steady = [_long_cell(d) for d in range(0, 120, 3)]          # 2-day gaps
+    paused = [_long_cell(d, lat=25.0) for d in list(range(0, 40, 2)) + list(range(80, 120, 2))]
+    result = temporal.add_temporal_features(pd.DataFrame(steady + paused))
+    assert not bool(result[result["latitude"] == 22.0]["reactivated"].iloc[0])
+    assert bool(result[result["latitude"] == 25.0]["reactivated"].iloc[0])
+
+
+def test_cross_validation_never_splits_a_grid_cell():
+    df = pd.DataFrame({
+        "latitude": [22.001, 22.002, 22.5, 22.5, 23.0, 23.0, 24.0, 24.0] * 3,
+        "longitude": [80.0] * 24,
+    })
+    groups = anomaly.cell_groups(df)
+    y = np.array([1, 1, 0, 0, 1, 1, 0, 0] * 3)
+    cv = anomaly.group_folds(y, groups)
+    for train, test in cv.split(np.zeros((len(y), 1)), y, groups):
+        assert not set(groups[train]) & set(groups[test])
