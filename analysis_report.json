@@ -1,6 +1,6 @@
 {
   "method_version": "3.0",
-  "input_rows": 624,
+  "input_rows": 45498,
   "registry": {
     "osm": 16299,
     "wri": 1589,
@@ -9,33 +9,37 @@
   },
   "model": {
     "trained": true,
-    "n_positive": 53,
-    "n_negative": 294,
-    "cv_auc": 0.8436015915800282,
+    "n_positive": 2822,
+    "n_negative": 23873,
+    "cv_auc": 0.9511399250279123,
     "cv_folds": 5,
+    "cv_grouping": "grid_cell",
     "feature_importance": {
-      "frp": 0.178,
-      "frp_robust_z": 0.1508,
-      "est_temp_k_filled": 0.0842,
-      "hot_fraction_log": 0.0529,
-      "recurrence_days": 0.0726,
-      "night_fraction": 0.3572,
-      "duty_cycle": 0.0602,
-      "frp_shift": 0.0442
+      "frp": 0.0419,
+      "frp_robust_z": 0.0312,
+      "est_temp_k_filled": 0.018,
+      "hot_fraction_log": 0.0113,
+      "recurrence_days": 0.2503,
+      "night_fraction": 0.1923,
+      "duty_cycle": 0.2247,
+      "frp_shift": 0.2304
     },
-    "model_path": "/Users/chiragdawra/Desktop/HackSpace/AntriX/satat_model_v3.pkl"
+    "model_path": "satat_model_v3.pkl"
   },
-  "retrieval_success_rate": 0.4567,
+  "retrieval_success_rate": 0.5721,
   "label_counts": {
-    "insufficient_evidence": 536,
-    "industrial_fire": 63,
-    "persistent_industrial_source": 25
+    "insufficient_evidence": 34813,
+    "industrial_fire": 7803,
+    "persistent_industrial_source": 2881,
+    "flare_signature": 1
   },
   "temp_class_counts": {
-    "unknown": 339,
-    "biomass_like": 149,
-    "smouldering": 133,
-    "mixed": 3
+    "unknown": 19469,
+    "smouldering": 13706,
+    "biomass_like": 11886,
+    "mixed": 398,
+    "furnace_like": 29,
+    "flare_like": 10
   },
-  "multi_source_confirmed": 90
+  "multi_source_confirmed": 5003
 }

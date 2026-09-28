@@ -1,19 +1,22 @@
 {
   "classifier": {
     "available": true,
-    "n_positive": 53,
-    "n_negative": 294,
+    "n_positive": 2822,
+    "n_negative": 23873,
+    "positive_cells": 248,
+    "negative_cells": 19189,
     "folds": 5,
-    "roc_auc": 0.8436,
-    "average_precision": 0.5804,
-    "precision": 0.4066,
-    "recall": 0.6981,
-    "f1": 0.5139,
+    "grouping": "grid_cell",
+    "roc_auc": 0.9511,
+    "average_precision": 0.6587,
+    "precision": 0.5791,
+    "recall": 0.7293,
+    "f1": 0.6455,
     "confusion": {
-      "tp": 37,
-      "fp": 54,
-      "tn": 240,
-      "fn": 16
+      "tp": 2058,
+      "fp": 1496,
+      "tn": 22377,
+      "fn": 764
     },
     "features": [
       "frp",
@@ -33,12 +36,12 @@
         "osm"
       ],
       "label": "OSM",
-      "corroborated": 167,
+      "corroborated": 8052,
       "multi_confirmed": 0,
-      "industrial_total": 135,
-      "persistent": 32,
-      "insufficient": 489,
-      "median_distance_km": 165.007,
+      "industrial_total": 8362,
+      "persistent": 3315,
+      "insufficient": 37136,
+      "median_distance_km": 138.757,
       "cv_auc": null
     },
     {
@@ -46,12 +49,12 @@
         "wri"
       ],
       "label": "WRI",
-      "corroborated": 87,
+      "corroborated": 3226,
       "multi_confirmed": 0,
-      "industrial_total": 91,
-      "persistent": 18,
-      "insufficient": 533,
-      "median_distance_km": 14.449,
+      "industrial_total": 5093,
+      "persistent": 1392,
+      "insufficient": 40405,
+      "median_distance_km": 19.623,
       "cv_auc": null
     },
     {
@@ -59,12 +62,12 @@
         "gem"
       ],
       "label": "GEM",
-      "corroborated": 105,
+      "corroborated": 6662,
       "multi_confirmed": 0,
-      "industrial_total": 99,
-      "persistent": 22,
-      "insufficient": 525,
-      "median_distance_km": 21.651,
+      "industrial_total": 7951,
+      "persistent": 3672,
+      "insufficient": 37547,
+      "median_distance_km": 23.686,
       "cv_auc": null
     },
     {
@@ -76,7 +79,7 @@
       "multi_confirmed": 0,
       "industrial_total": 0,
       "persistent": 0,
-      "insufficient": 624,
+      "insufficient": 45498,
       "median_distance_km": Infinity,
       "cv_auc": null
     },
@@ -86,13 +89,13 @@
         "wri"
       ],
       "label": "OSM + WRI",
-      "corroborated": 200,
-      "multi_confirmed": 54,
-      "industrial_total": 68,
-      "persistent": 27,
-      "insufficient": 556,
-      "median_distance_km": 9.937,
-      "cv_auc": 0.9313010140984418
+      "corroborated": 10025,
+      "multi_confirmed": 1253,
+      "industrial_total": 3152,
+      "persistent": 166,
+      "insufficient": 42346,
+      "median_distance_km": 13.213,
+      "cv_auc": 0.9128380836421658
     },
     {
       "sources": [
@@ -100,13 +103,13 @@
         "gem"
       ],
       "label": "OSM + GEM",
-      "corroborated": 200,
-      "multi_confirmed": 72,
-      "industrial_total": 77,
-      "persistent": 21,
-      "insufficient": 547,
-      "median_distance_km": 14.804,
-      "cv_auc": 0.7993233082706767
+      "corroborated": 10749,
+      "multi_confirmed": 3965,
+      "industrial_total": 9294,
+      "persistent": 2779,
+      "insufficient": 36204,
+      "median_distance_km": 17.498,
+      "cv_auc": 0.9500951879655685
     },
     {
       "sources": [
@@ -114,13 +117,13 @@
         "gem"
       ],
       "label": "WRI + GEM",
-      "corroborated": 128,
-      "multi_confirmed": 64,
-      "industrial_total": 70,
-      "persistent": 20,
-      "insufficient": 554,
-      "median_distance_km": 12.695,
-      "cv_auc": 0.8656398697721011
+      "corroborated": 7709,
+      "multi_confirmed": 2179,
+      "industrial_total": 3844,
+      "persistent": 205,
+      "insufficient": 41654,
+      "median_distance_km": 14.814,
+      "cv_auc": 0.9051207025635595
     },
     {
       "sources": [
@@ -129,13 +132,13 @@
         "gem"
       ],
       "label": "OSM + WRI + GEM",
-      "corroborated": 219,
-      "multi_confirmed": 90,
-      "industrial_total": 88,
-      "persistent": 25,
-      "insufficient": 536,
-      "median_distance_km": 8.648,
-      "cv_auc": 0.8436015915800282
+      "corroborated": 11740,
+      "multi_confirmed": 5003,
+      "industrial_total": 10685,
+      "persistent": 2881,
+      "insufficient": 34813,
+      "median_distance_km": 11.129,
+      "cv_auc": 0.9511399250279126
     },
     {
       "sources": [
@@ -145,13 +148,13 @@
         "eog"
       ],
       "label": "OSM + WRI + GEM + EOG",
-      "corroborated": 219,
-      "multi_confirmed": 90,
-      "industrial_total": 88,
-      "persistent": 25,
-      "insufficient": 536,
-      "median_distance_km": 8.648,
-      "cv_auc": 0.8436015915800282
+      "corroborated": 11740,
+      "multi_confirmed": 5003,
+      "industrial_total": 10685,
+      "persistent": 2881,
+      "insufficient": 34813,
+      "median_distance_km": 11.129,
+      "cv_auc": 0.9511399250279124
     }
   ],
   "overlap": {
@@ -189,22 +192,26 @@
     "multi_source_sites": 363
   },
   "retrieval_status": {
-    "weak_11um": 315,
-    "ok": 284,
-    "no_bracket": 19,
-    "saturated_lower_bound": 6
+    "ok": 25746,
+    "weak_11um": 14249,
+    "no_bracket": 4944,
+    "saturated_lower_bound": 536,
+    "below_background": 23
   },
-  "retrieval_rate": 0.4567,
+  "retrieval_rate": 0.5721,
   "temp_class_counts": {
-    "unknown": 339,
-    "biomass_like": 149,
-    "smouldering": 133,
-    "mixed": 3
+    "unknown": 19469,
+    "smouldering": 13706,
+    "biomass_like": 11886,
+    "mixed": 398,
+    "furnace_like": 29,
+    "flare_like": 10
   },
   "label_counts": {
-    "insufficient_evidence": 536,
-    "industrial_fire": 63,
-    "persistent_industrial_source": 25
+    "insufficient_evidence": 34813,
+    "industrial_fire": 7803,
+    "persistent_industrial_source": 2881,
+    "flare_signature": 1
   },
-  "detections": 624
+  "detections": 45498
 }

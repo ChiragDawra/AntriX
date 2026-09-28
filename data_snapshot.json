@@ -1,10 +1,10 @@
 {
-  "snapshot_id": "cf8ae866",
-  "generated_at": "2026-09-26 14:38 UTC",
-  "total_detections": 624,
+  "snapshot_id": "0e347a98",
+  "generated_at": "2026-09-28 12:36 UTC",
+  "total_detections": 45498,
   "date_range": [
-    "2026-09-22",
-    "2026-09-26"
+    "2026-06-01",
+    "2026-09-28"
   ],
   "method_version": "3.0",
   "registry": {
@@ -15,10 +15,10 @@
   },
   "model": {
     "trained": true,
-    "n_positive": 53,
-    "n_negative": 294,
-    "cv_auc": 0.8436015915800282,
+    "n_positive": 2822,
+    "n_negative": 23873,
+    "cv_auc": 0.9511399250279123,
     "cv_folds": 5
   },
-  "retrieval_success_rate": 0.4567
+  "retrieval_success_rate": 0.5721
 }
